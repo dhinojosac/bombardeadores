@@ -1,0 +1,17 @@
+{
+  "name": "bomberman-client",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 3000",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "phaser": "^3.80.0",
+    "colyseus.js": "^0.16.0"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0",
+    "typescript": "^5.4.0"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "multiplayer-game",
+  "private": true,
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev:server": "npm run dev --workspace=server",
+    "dev:client": "npm run dev --workspace=client",
+    "build:client": "npm run build --workspace=client",
+    "tunnel:serve": "npm run start --workspace=server",
+    "tunnel:open": "npm run tunnel --workspace=server",
+    "tunnel:cf": "./cloudflared.exe tunnel --url http://localhost:2567",
+    "install:all": "npm install"
+  }
+}

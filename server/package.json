@@ -1,0 +1,20 @@
+{
+  "name": "bomberman-server",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "dev": "tsx watch src/app.config.ts",
+    "start": "tsx src/app.config.ts",
+    "tunnel": "npx localtunnel --port 2567"
+  },
+  "dependencies": {
+    "@colyseus/schema": "^3.0.0",
+    "@colyseus/ws-transport": "^0.16.0",
+    "colyseus": "^0.16.0"
+  },
+  "devDependencies": {
+    "localtunnel": "^2.0.2",
+    "tsx": "^4.0.0",
+    "typescript": "^5.4.0"
+  }
+}
