@@ -5,7 +5,7 @@ Juego 2D multijugador estilo Bomberman construido con **Phaser 3** (cliente) y *
 - Partida única siempre activa — todos los jugadores conectados entran automáticamente
 - Servidor completamente autoritativo — los clientes solo envían inputs y renderizan
 - Sincronización de estado en tiempo real vía WebSocket (20 Hz)
-- Soporte para jugar online a través de un tunnel público con localtunnel
+- Soporte para jugar online a través de tunnel público (Cloudflare Tunnel recomendado)
 
 ---
 
@@ -39,6 +39,8 @@ El cliente detecta automáticamente el entorno: si corre en `localhost:3000` (Vi
 
 El servidor sirve el cliente compilado y el WebSocket desde un **único puerto (2567)**, lo que permite exponerlo con una sola URL pública.
 
+### Opcion recomendada: Cloudflare Tunnel (sin contraseña)
+
 ```bash
 # 1. Compilar el cliente
 npm run build:client
@@ -46,13 +48,21 @@ npm run build:client
 # 2. Terminal A — servidor completo en http://localhost:2567
 npm run tunnel:serve
 
-# 3. Terminal B — abrir tunnel público
+# 3. Terminal B — abrir tunnel Cloudflare
+npm run tunnel:cf
+```
+
+Genera una URL del tipo `https://xxxx.trycloudflare.com` y se puede compartir directamente.
+
+### Opcion alternativa: localtunnel
+
+```bash
+# Con el servidor ya corriendo
 npm run tunnel:open
 ```
 
-El tunnel genera una URL del tipo `https://xyz.loca.lt`. Compartirla con los amigos.
-
-> **Contraseña del tunnel:** la primera vez que alguien accede desde un navegador, localtunnel pide una contraseña. Esta contraseña es tu IP pública. Para obtenerla, abrir `https://loca.lt/mytunnelpassword` desde la misma máquina que corre el servidor y compartirla junto con la URL.
+Genera una URL `https://xyz.loca.lt`, pero puede ser menos estable y pedir contraseña.
+La contraseña se obtiene en `https://loca.lt/mytunnelpassword`.
 
 ---
 
@@ -100,6 +110,7 @@ El tunnel genera una URL del tipo `https://xyz.loca.lt`. Compartirla con los ami
 | `npm run dev:client` | Inicia cliente con Vite (desarrollo) |
 | `npm run build:client` | Compila el cliente para producción |
 | `npm run tunnel:serve` | Inicia servidor sirviendo el cliente compilado |
+| `npm run tunnel:cf` | Abre Cloudflare Tunnel (recomendado) |
 | `npm run tunnel:open` | Abre el tunnel público con localtunnel |
 
 ---
