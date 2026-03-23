@@ -4,3 +4,4 @@ server/dist/
 cloudflared.exe
 *.log
 .env
+config.yml

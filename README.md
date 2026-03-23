@@ -39,7 +39,23 @@ El cliente detecta automáticamente el entorno: si corre en `localhost:3000` (Vi
 
 El servidor sirve el cliente compilado y el WebSocket desde un **único puerto (2567)**, lo que permite exponerlo con una sola URL pública.
 
-### Opcion recomendada: Cloudflare Tunnel (sin contraseña)
+### Todo en uno (recomendado)
+
+Un solo comando compila el cliente, levanta el servidor y abre el tunnel de Cloudflare. Necesitas **cloudflared**: coloca `cloudflared.exe` en la raíz del proyecto (Windows) o instálalo en el PATH.
+
+```bash
+npm run tunnel:all
+```
+
+En Windows también puedes usar:
+
+```powershell
+.\scripts\tunnel.ps1
+```
+
+`Ctrl+C` detiene servidor y tunnel a la vez.
+
+### Opcion manual: Cloudflare Tunnel (sin contraseña)
 
 ```bash
 # 1. Compilar el cliente
@@ -110,6 +126,7 @@ La contraseña se obtiene en `https://loca.lt/mytunnelpassword`.
 | `npm run dev:client` | Inicia cliente con Vite (desarrollo) |
 | `npm run build:client` | Compila el cliente para producción |
 | `npm run tunnel:serve` | Inicia servidor sirviendo el cliente compilado |
+| `npm run tunnel:all` | Build + servidor + Cloudflare Tunnel (todo en uno) |
 | `npm run tunnel:cf` | Abre Cloudflare Tunnel (recomendado) |
 | `npm run tunnel:open` | Abre el tunnel público con localtunnel |
 
@@ -120,6 +137,9 @@ La contraseña se obtiene en `https://loca.lt/mytunnelpassword`.
 ```
 multiplayer-game/
 ├── package.json              — Workspace root (npm workspaces)
+├── scripts/
+│   ├── tunnel-cf.cjs         — Lanza cloudflared (exe local o PATH)
+│   └── tunnel.ps1            — Atajo Windows: npm install + tunnel:all
 ├── server/                   — Colyseus game server (TypeScript)
 │   └── src/
 │       ├── app.config.ts     — Entry point: HTTP + WebSocket en un solo puerto

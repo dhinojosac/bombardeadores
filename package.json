@@ -11,7 +11,12 @@
     "build:client": "npm run build --workspace=client",
     "tunnel:serve": "npm run start --workspace=server",
     "tunnel:open": "npm run tunnel --workspace=server",
-    "tunnel:cf": "./cloudflared.exe tunnel --url http://localhost:2567",
+    "tunnel:cf": "node scripts/tunnel-cf.cjs",
+    "tunnel:all": "npm run build:client && concurrently -k -n server,tunnel -c blue,magenta \"npm run tunnel:serve\" \"wait-on http://127.0.0.1:2567 && npm run tunnel:cf\"",
     "install:all": "npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "wait-on": "^8.0.1"
   }
 }
