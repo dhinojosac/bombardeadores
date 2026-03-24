@@ -3,7 +3,7 @@ import Phaser from "phaser";
 const TILE_SIZE = 48;
 
 export class ExplosionSprite {
-  private rects: Phaser.GameObjects.Rectangle[] = [];
+  private sprites: Phaser.GameObjects.Sprite[] = [];
 
   constructor(scene: Phaser.Scene, cellsStr: string) {
     const cells = this.parseCells(cellsStr);
@@ -12,20 +12,22 @@ export class ExplosionSprite {
       const px = cell.x * TILE_SIZE + TILE_SIZE / 2;
       const py = cell.y * TILE_SIZE + TILE_SIZE / 2;
 
-      const rect = scene.add.rectangle(px, py, TILE_SIZE - 4, TILE_SIZE - 4, 0xff4500);
-      rect.setAlpha(0.8);
-      rect.setDepth(8);
+      const sprite = scene.add.sprite(px, py, "explosion_cell");
+      sprite.setOrigin(0.5, 0.5);
+      sprite.setDisplaySize(TILE_SIZE - 4, TILE_SIZE - 4);
+      sprite.setDepth(8);
+      sprite.setAlpha(0.95);
 
       scene.tweens.add({
-        targets: rect,
-        alpha: { from: 0.9, to: 0.3 },
-        scaleX: { from: 1, to: 0.6 },
-        scaleY: { from: 1, to: 0.6 },
+        targets: sprite,
+        alpha: { from: 0.95, to: 0.25 },
+        scaleX: { from: 1, to: 0.65 },
+        scaleY: { from: 1, to: 0.65 },
         duration: 400,
         ease: "Power2",
       });
 
-      this.rects.push(rect);
+      this.sprites.push(sprite);
     }
   }
 
@@ -38,9 +40,9 @@ export class ExplosionSprite {
   }
 
   destroy(): void {
-    for (const r of this.rects) {
-      r.destroy();
+    for (const s of this.sprites) {
+      s.destroy();
     }
-    this.rects = [];
+    this.sprites = [];
   }
 }

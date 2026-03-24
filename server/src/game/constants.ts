@@ -12,7 +12,7 @@ export const PLAYER_SPEED = 150;
 export const DEFAULT_BOMB_COUNT = 1;
 export const DEFAULT_EXPLOSION_RADIUS = 2;
 
-export const PLAYER_HITBOX_SIZE = 40;
+export const PLAYER_HITBOX_SIZE = 30;
 
 export enum TileType {
   EMPTY = 0,

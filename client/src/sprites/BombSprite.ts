@@ -1,28 +1,24 @@
 import Phaser from "phaser";
 
 const TILE_SIZE = 48;
-const BOMB_RADIUS = 16;
 
 export class BombSprite {
-  private circle: Phaser.GameObjects.Arc;
-  private fuse: Phaser.GameObjects.Arc;
+  private sprite: Phaser.GameObjects.Sprite;
   private tween: Phaser.Tweens.Tween;
 
   constructor(scene: Phaser.Scene, tileX: number, tileY: number) {
     const px = tileX * TILE_SIZE + TILE_SIZE / 2;
     const py = tileY * TILE_SIZE + TILE_SIZE / 2;
 
-    this.circle = scene.add.circle(px, py, BOMB_RADIUS, 0x2c3e50);
-    this.circle.setStrokeStyle(2, 0x000000);
-    this.circle.setDepth(5);
-
-    this.fuse = scene.add.circle(px, py - BOMB_RADIUS + 4, 3, 0xff6600);
-    this.fuse.setDepth(6);
+    this.sprite = scene.add.sprite(px, py, "bomb");
+    this.sprite.setOrigin(0.5, 0.5);
+    this.sprite.setDisplaySize(TILE_SIZE * 0.85, TILE_SIZE * 0.85);
+    this.sprite.setDepth(5);
 
     this.tween = scene.tweens.add({
-      targets: [this.circle],
-      scaleX: { from: 1, to: 1.15 },
-      scaleY: { from: 1, to: 1.15 },
+      targets: [this.sprite],
+      scaleX: { from: 1, to: 1.12 },
+      scaleY: { from: 1, to: 1.12 },
       duration: 300,
       yoyo: true,
       repeat: -1,
@@ -31,7 +27,6 @@ export class BombSprite {
 
   destroy(): void {
     this.tween.destroy();
-    this.circle.destroy();
-    this.fuse.destroy();
+    this.sprite.destroy();
   }
 }

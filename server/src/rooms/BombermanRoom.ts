@@ -10,6 +10,15 @@ import {
   DEFAULT_EXPLOSION_RADIUS,
 } from "../game/constants";
 
+const DISPLAY_NAME_MAX_LEN = 24;
+
+function sanitizeDisplayName(raw: unknown, fallback: string): string {
+  if (typeof raw !== "string") return fallback;
+  const noControl = raw.replace(/[\u0000-\u001F\u007F]/g, "");
+  const trimmed = noControl.trim().slice(0, DISPLAY_NAME_MAX_LEN).trim();
+  return trimmed.length > 0 ? trimmed : fallback;
+}
+
 export class BombermanRoom extends Room<GameState> {
   private gameMap!: GameMap;
   private engine!: GameEngine;
@@ -48,7 +57,8 @@ export class BombermanRoom extends Room<GameState> {
   onJoin(client: Client, options: { name?: string }): void {
     const player = new PlayerState();
     player.sessionId = client.sessionId;
-    player.name = options.name || `Player ${this.clients.length}`;
+    const defaultName = `Player ${this.clients.length}`;
+    player.name = sanitizeDisplayName(options?.name, defaultName);
     player.bombsAvailable = DEFAULT_BOMB_COUNT;
     player.maxBombs = DEFAULT_BOMB_COUNT;
     player.explosionRadius = DEFAULT_EXPLOSION_RADIUS;

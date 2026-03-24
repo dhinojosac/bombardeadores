@@ -6,17 +6,20 @@
     "client"
   ],
   "scripts": {
-    "dev:server": "npm run dev --workspace=server",
+    "free-port": "node scripts/free-port.cjs",
+    "dev:server": "npm run free-port && npm run dev --workspace=server",
     "dev:client": "npm run dev --workspace=client",
     "build:client": "npm run build --workspace=client",
-    "tunnel:serve": "npm run start --workspace=server",
+    "tunnel:serve": "npm run free-port && npm run start --workspace=server",
     "tunnel:open": "npm run tunnel --workspace=server",
     "tunnel:cf": "node scripts/tunnel-cf.cjs",
-    "tunnel:all": "npm run build:client && concurrently -k -n server,tunnel -c blue,magenta \"npm run tunnel:serve\" \"wait-on http://127.0.0.1:2567 && npm run tunnel:cf\"",
+    "tunnel:all": "npm run free-port && npm run build:client && concurrently -k -n server,tunnel -c blue,magenta \"npm run tunnel:serve\" \"wait-on http://127.0.0.1:2567 && npm run tunnel:cf\"",
+    "start:online": "npm run tunnel:all",
     "install:all": "npm install"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
+    "kill-port": "^2.0.1",
     "wait-on": "^8.0.1"
   }
 }

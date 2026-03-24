@@ -4,13 +4,50 @@ import { PlayerSprite } from "../sprites/PlayerSprite";
 import { BombSprite } from "../sprites/BombSprite";
 import { ExplosionSprite } from "../sprites/ExplosionSprite";
 import { HUD } from "../ui/HUD";
+import { registerGameTextures } from "../assets/registerTextures";
+import { OPTIONAL_IMAGE_ASSETS } from "../assets/optionalAssets";
+import { validateOptionalTextures } from "../assets/validateTextures";
 
 const TILE_SIZE = 48;
+const DISPLAY_NAME_STORAGE_KEY = "bomberman_display_name";
 
-const TILE_COLORS: Record<number, number> = {
-  0: 0x7ec850, // empty — grass green
-  1: 0x4a4a4a, // solid — dark gray
-  2: 0xb5651d, // breakable — brown
+function resolveDisplayName(): string {
+  const params = new URLSearchParams(window.location.search);
+  const fromUrl = params.get("name");
+  if (fromUrl != null) {
+    const trimmed = fromUrl.trim();
+    if (trimmed.length > 0) {
+      try {
+        localStorage.setItem(DISPLAY_NAME_STORAGE_KEY, trimmed);
+      } catch {
+        /* ignore */
+      }
+      return trimmed;
+    }
+  }
+  try {
+    const stored = localStorage.getItem(DISPLAY_NAME_STORAGE_KEY);
+    if (stored && stored.trim().length > 0) return stored.trim();
+  } catch {
+    /* ignore */
+  }
+  const prompted = window.prompt("Nombre (opcional)", "");
+  if (prompted != null && prompted.trim().length > 0) {
+    const name = prompted.trim();
+    try {
+      localStorage.setItem(DISPLAY_NAME_STORAGE_KEY, name);
+    } catch {
+      /* ignore */
+    }
+    return name;
+  }
+  return `Player_${Math.floor(Math.random() * 9999)}`;
+}
+
+const TILE_KEYS: Record<number, string> = {
+  0: "tile_empty",
+  1: "tile_solid",
+  2: "tile_breakable",
 };
 
 export class GameScene extends Phaser.Scene {
@@ -19,7 +56,7 @@ export class GameScene extends Phaser.Scene {
   private bombs: Map<string, BombSprite> = new Map();
   private explosions: Map<string, ExplosionSprite> = new Map();
   private hud!: HUD;
-  private tileGraphics!: Phaser.GameObjects.Graphics;
+  private tileLayer!: Phaser.GameObjects.Container;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: Record<string, Phaser.Input.Keyboard.Key>;
   private bombKey!: Phaser.Input.Keyboard.Key;
@@ -32,8 +69,22 @@ export class GameScene extends Phaser.Scene {
     super({ key: "GameScene" });
   }
 
+  preload(): void {
+    this.load.on("loaderror", (file: Phaser.Loader.File) => {
+      console.warn(`[assets] Falló la carga de "${file.key}". Se usará fallback generado.`);
+    });
+
+    for (const { key, url } of OPTIONAL_IMAGE_ASSETS) {
+      this.load.image(key, url);
+    }
+  }
+
   create(): void {
-    this.tileGraphics = this.add.graphics();
+    validateOptionalTextures(this);
+    registerGameTextures(this);
+
+    this.tileLayer = this.add.container(0, 0);
+    this.tileLayer.setDepth(0);
 
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.wasd = {
@@ -52,10 +103,10 @@ export class GameScene extends Phaser.Scene {
   private async connectToServer(): Promise<void> {
     this.network = new NetworkManager();
 
-    const name = `Player_${Math.floor(Math.random() * 9999)}`;
+    const displayName = resolveDisplayName();
 
     try {
-      const room = await this.network.connect(name);
+      const room = await this.network.connect(displayName);
       this.connected = true;
       const $ = this.network.getCallbackProxy();
 
@@ -72,7 +123,14 @@ export class GameScene extends Phaser.Scene {
 
       $(room.state as any).players.onAdd((player: any, sessionId: string) => {
         const isLocal = sessionId === room.sessionId;
-        const sprite = new PlayerSprite(this, player.x, player.y, player.name, isLocal);
+        const sprite = new PlayerSprite(
+          this,
+          player.x,
+          player.y,
+          player.name,
+          isLocal,
+          player.direction ?? 0
+        );
         this.players.set(sessionId, sprite);
         this.hud.addPlayer(sessionId, player.name);
 
@@ -82,6 +140,10 @@ export class GameScene extends Phaser.Scene {
 
         $(player).listen("y", (value: number) => {
           sprite.setTargetY(value);
+        });
+
+        $(player).listen("direction", (value: number) => {
+          sprite.setDirection(value);
         });
 
         $(player).listen("alive", (value: boolean) => {
@@ -138,16 +200,17 @@ export class GameScene extends Phaser.Scene {
   }
 
   private drawMap(tiles: any): void {
-    this.tileGraphics.clear();
+    this.tileLayer.removeAll(true);
     for (let y = 0; y < this.mapHeight; y++) {
       for (let x = 0; x < this.mapWidth; x++) {
         const tileType = tiles[y * this.mapWidth + x] ?? 0;
-        const color = TILE_COLORS[tileType] ?? 0x000000;
-        this.tileGraphics.fillStyle(color, 1);
-        this.tileGraphics.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-
-        this.tileGraphics.lineStyle(1, 0x000000, 0.15);
-        this.tileGraphics.strokeRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        const key = TILE_KEYS[tileType] ?? "tile_empty";
+        const px = x * TILE_SIZE + TILE_SIZE / 2;
+        const py = y * TILE_SIZE + TILE_SIZE / 2;
+        const img = this.add.image(px, py, key);
+        img.setOrigin(0.5, 0.5);
+        img.setDisplaySize(TILE_SIZE, TILE_SIZE);
+        this.tileLayer.add(img);
       }
     }
   }

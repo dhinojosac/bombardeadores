@@ -70,12 +70,33 @@ export class GameEngine {
       const newX = player.x + vx * speed;
       const newY = player.y + vy * speed;
 
-      player.x = this.resolveCollisionX(player.x, player.y, newX);
-      player.y = this.resolveCollisionY(player.x, player.y, newY);
+      player.x = this.resolveCollisionX(state, player, player.x, player.y, newX);
+      player.y = this.resolveCollisionY(state, player, player.x, player.y, newY);
     });
   }
 
-  private resolveCollisionX(oldX: number, y: number, newX: number): number {
+  /** Mapa + bombas; si hay bomba en el tile pero el centro del jugador sigue en ese tile, permite salir. */
+  private tileBlocksMovement(
+    state: GameState,
+    player: PlayerState,
+    tileX: number,
+    tileY: number
+  ): boolean {
+    if (!this.map.isWalkable(tileX, tileY)) return true;
+    if (!this.bombAtTile(state.bombs, tileX, tileY)) return false;
+    const cx = this.map.pixelToTile(player.x);
+    const cy = this.map.pixelToTile(player.y);
+    if (tileX === cx && tileY === cy) return false;
+    return true;
+  }
+
+  private resolveCollisionX(
+    state: GameState,
+    player: PlayerState,
+    oldX: number,
+    y: number,
+    newX: number
+  ): number {
     const half = PLAYER_HITBOX_SIZE / 2;
     const top = y - half;
     const bottom = y + half - 1;
@@ -85,7 +106,10 @@ export class GameEngine {
       const tileX = Math.floor(edgeX / TILE_SIZE);
       const tileYTop = Math.floor(top / TILE_SIZE);
       const tileYBottom = Math.floor(bottom / TILE_SIZE);
-      if (!this.map.isWalkable(tileX, tileYTop) || !this.map.isWalkable(tileX, tileYBottom)) {
+      if (
+        this.tileBlocksMovement(state, player, tileX, tileYTop) ||
+        this.tileBlocksMovement(state, player, tileX, tileYBottom)
+      ) {
         return tileX * TILE_SIZE - half - 0.01;
       }
     } else if (newX < oldX) {
@@ -93,7 +117,10 @@ export class GameEngine {
       const tileX = Math.floor(edgeX / TILE_SIZE);
       const tileYTop = Math.floor(top / TILE_SIZE);
       const tileYBottom = Math.floor(bottom / TILE_SIZE);
-      if (!this.map.isWalkable(tileX, tileYTop) || !this.map.isWalkable(tileX, tileYBottom)) {
+      if (
+        this.tileBlocksMovement(state, player, tileX, tileYTop) ||
+        this.tileBlocksMovement(state, player, tileX, tileYBottom)
+      ) {
         return (tileX + 1) * TILE_SIZE + half + 0.01;
       }
     }
@@ -101,7 +128,13 @@ export class GameEngine {
     return newX;
   }
 
-  private resolveCollisionY(x: number, oldY: number, newY: number): number {
+  private resolveCollisionY(
+    state: GameState,
+    player: PlayerState,
+    x: number,
+    oldY: number,
+    newY: number
+  ): number {
     const half = PLAYER_HITBOX_SIZE / 2;
     const left = x - half;
     const right = x + half - 1;
@@ -111,7 +144,10 @@ export class GameEngine {
       const tileY = Math.floor(edgeY / TILE_SIZE);
       const tileXLeft = Math.floor(left / TILE_SIZE);
       const tileXRight = Math.floor(right / TILE_SIZE);
-      if (!this.map.isWalkable(tileXLeft, tileY) || !this.map.isWalkable(tileXRight, tileY)) {
+      if (
+        this.tileBlocksMovement(state, player, tileXLeft, tileY) ||
+        this.tileBlocksMovement(state, player, tileXRight, tileY)
+      ) {
         return tileY * TILE_SIZE - half - 0.01;
       }
     } else if (newY < oldY) {
@@ -119,7 +155,10 @@ export class GameEngine {
       const tileY = Math.floor(edgeY / TILE_SIZE);
       const tileXLeft = Math.floor(left / TILE_SIZE);
       const tileXRight = Math.floor(right / TILE_SIZE);
-      if (!this.map.isWalkable(tileXLeft, tileY) || !this.map.isWalkable(tileXRight, tileY)) {
+      if (
+        this.tileBlocksMovement(state, player, tileXLeft, tileY) ||
+        this.tileBlocksMovement(state, player, tileXRight, tileY)
+      ) {
         return (tileY + 1) * TILE_SIZE + half + 0.01;
       }
     }
