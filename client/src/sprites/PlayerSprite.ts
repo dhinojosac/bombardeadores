@@ -1,11 +1,10 @@
 import Phaser from "phaser";
-import { PLAYER_TEXTURE_BY_DIRECTION } from "../assets/registerTextures";
+import { PLAYER_BODY_DISPLAY_SIZE, PLAYER_TEXTURE_BY_DIRECTION } from "../assets/registerTextures";
 
 const PLAYER_COLORS = [0x3498db, 0xe74c3c, 0x2ecc71, 0xf39c12, 0x9b59b6, 0x1abc9c, 0xe67e22, 0xecf0f1];
 let colorIndex = 0;
 
-/** Debe coincidir con PLAYER_HITBOX_SIZE del servidor para sensación coherente. */
-const HITBOX_SIZE = 30;
+/** Solo render: la colisión real la calcula el servidor (`PLAYER_HITBOX_SIZE`, p. ej. 30 px). */
 const LERP_SPEED = 0.25;
 
 function textureForDirection(dir: number): string {
@@ -39,10 +38,10 @@ export class PlayerSprite {
     this.direction = initialDirection & 3;
 
     this.body = scene.add.sprite(0, 0, textureForDirection(this.direction));
-    this.body.setDisplaySize(HITBOX_SIZE, HITBOX_SIZE);
+    this.body.setDisplaySize(PLAYER_BODY_DISPLAY_SIZE, PLAYER_BODY_DISPLAY_SIZE);
     this.body.setTint(this.color);
 
-    this.nameText = scene.add.text(0, -HITBOX_SIZE / 2 - 10, name, {
+    this.nameText = scene.add.text(0, -PLAYER_BODY_DISPLAY_SIZE / 2 - 10, name, {
       fontSize: "11px",
       color: "#ffffff",
       fontFamily: "monospace",
@@ -72,7 +71,7 @@ export class PlayerSprite {
     if (d === this.direction) return;
     this.direction = d;
     this.body.setTexture(textureForDirection(d));
-    this.body.setDisplaySize(HITBOX_SIZE, HITBOX_SIZE);
+    this.body.setDisplaySize(PLAYER_BODY_DISPLAY_SIZE, PLAYER_BODY_DISPLAY_SIZE);
     this.body.setTint(this.invulnerable ? 0xffff00 : this.color);
   }
 

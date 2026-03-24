@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import type { Room } from "colyseus.js";
 import { NetworkManager, PlayerInput } from "../network/NetworkManager";
 import { PlayerSprite } from "../sprites/PlayerSprite";
 import { BombSprite } from "../sprites/BombSprite";
@@ -7,42 +8,14 @@ import { HUD } from "../ui/HUD";
 import { registerGameTextures } from "../assets/registerTextures";
 import { OPTIONAL_IMAGE_ASSETS } from "../assets/optionalAssets";
 import { validateOptionalTextures } from "../assets/validateTextures";
+import { showNameOverlay, DISPLAY_NAME_STORAGE_KEY } from "../ui/nameOverlay";
+import {
+  showResultsOverlay,
+  hideResultsOverlay,
+  collectStandingsFromState,
+} from "../ui/resultsOverlay";
 
 const TILE_SIZE = 48;
-const DISPLAY_NAME_STORAGE_KEY = "bomberman_display_name";
-
-function resolveDisplayName(): string {
-  const params = new URLSearchParams(window.location.search);
-  const fromUrl = params.get("name");
-  if (fromUrl != null) {
-    const trimmed = fromUrl.trim();
-    if (trimmed.length > 0) {
-      try {
-        localStorage.setItem(DISPLAY_NAME_STORAGE_KEY, trimmed);
-      } catch {
-        /* ignore */
-      }
-      return trimmed;
-    }
-  }
-  try {
-    const stored = localStorage.getItem(DISPLAY_NAME_STORAGE_KEY);
-    if (stored && stored.trim().length > 0) return stored.trim();
-  } catch {
-    /* ignore */
-  }
-  const prompted = window.prompt("Nombre (opcional)", "");
-  if (prompted != null && prompted.trim().length > 0) {
-    const name = prompted.trim();
-    try {
-      localStorage.setItem(DISPLAY_NAME_STORAGE_KEY, name);
-    } catch {
-      /* ignore */
-    }
-    return name;
-  }
-  return `Player_${Math.floor(Math.random() * 9999)}`;
-}
 
 const TILE_KEYS: Record<number, string> = {
   0: "tile_empty",
@@ -62,8 +35,10 @@ export class GameScene extends Phaser.Scene {
   private bombKey!: Phaser.Input.Keyboard.Key;
   private lastInput: PlayerInput = { left: false, right: false, up: false, down: false };
   private connected = false;
+  private matchPlaying = true;
   private mapWidth = 15;
   private mapHeight = 13;
+  private colyseusRoom: Room | null = null;
 
   constructor() {
     super({ key: "GameScene" });
@@ -86,6 +61,49 @@ export class GameScene extends Phaser.Scene {
     this.tileLayer = this.add.container(0, 0);
     this.tileLayer.setDepth(0);
 
+    this.hud = new HUD(this);
+
+    showNameOverlay((raw) => {
+      let displayName = raw;
+      if (!displayName) {
+        displayName = `Player_${Math.floor(Math.random() * 9999)}`;
+      } else {
+        try {
+          localStorage.setItem(DISPLAY_NAME_STORAGE_KEY, displayName);
+        } catch {
+          /* ignore */
+        }
+      }
+      void this.connectToServer(displayName);
+    });
+  }
+
+  private syncMatchHud(rs: {
+    matchPhase: string;
+    winnerName: string;
+    endReason: string;
+  }): void {
+    this.hud.setMatchEnd(rs.matchPhase, rs.winnerName, rs.endReason);
+  }
+
+  private refreshResultsOverlay(rs: any): void {
+    if (!this.colyseusRoom) return;
+    if (rs.matchPhase !== "finished") {
+      hideResultsOverlay();
+      return;
+    }
+    const rows = collectStandingsFromState(rs.finalStandings);
+    showResultsOverlay(rows, this.colyseusRoom.sessionId, rs.endReason ?? "");
+  }
+
+  private scheduleResultsOverlay(rs: any): void {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => this.refreshResultsOverlay(rs));
+    });
+  }
+
+  /** Tras el overlay de nombre: si se registra antes, Phaser captura WASD y no llegan al campo de texto. */
+  private initKeyboard(): void {
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.wasd = {
       W: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.W),
@@ -94,34 +112,63 @@ export class GameScene extends Phaser.Scene {
       D: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D),
     };
     this.bombKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-
-    this.hud = new HUD(this);
-
-    this.connectToServer();
   }
 
-  private async connectToServer(): Promise<void> {
+  private async connectToServer(displayName: string): Promise<void> {
     this.network = new NetworkManager();
-
-    const displayName = resolveDisplayName();
 
     try {
       const room = await this.network.connect(displayName);
+      this.colyseusRoom = room;
+      this.initKeyboard();
       this.connected = true;
       const $ = this.network.getCallbackProxy();
+      const rs = room.state as any;
 
-      this.mapWidth = (room.state as any).mapWidth || 15;
-      this.mapHeight = (room.state as any).mapHeight || 13;
+      this.mapWidth = rs.mapWidth || 15;
+      this.mapHeight = rs.mapHeight || 13;
+
+      this.matchPlaying = rs.matchPhase === "playing";
+      this.hud.setTimerMs(rs.timeRemainingMs);
+      this.hud.setScoreTarget(rs.scoreTarget);
+      this.syncMatchHud(rs);
+      if (rs.matchPhase === "finished") {
+        this.scheduleResultsOverlay(rs);
+      }
+
+      $(rs).listen("timeRemainingMs", (value: number) => {
+        this.hud.setTimerMs(value);
+      });
+      $(rs).listen("scoreTarget", (value: number) => {
+        this.hud.setScoreTarget(value);
+      });
+      $(rs).listen("matchPhase", (value: string) => {
+        this.matchPlaying = value === "playing";
+        this.syncMatchHud(rs);
+        if (value === "finished") {
+          this.scheduleResultsOverlay(rs);
+        } else {
+          hideResultsOverlay();
+        }
+      });
+      $(rs).listen("winnerName", () => this.syncMatchHud(rs));
+      $(rs).listen("endReason", () => this.syncMatchHud(rs));
+
+      $(rs).finalStandings.onAdd(() => {
+        if (rs.matchPhase === "finished") {
+          this.scheduleResultsOverlay(rs);
+        }
+      });
 
       room.onStateChange.once(() => {
-        this.drawMap((room.state as any).tiles);
+        this.drawMap(rs.tiles);
       });
 
-      $(room.state as any).tiles.onChange(() => {
-        this.drawMap((room.state as any).tiles);
+      $(rs).tiles.onChange(() => {
+        this.drawMap(rs.tiles);
       });
 
-      $(room.state as any).players.onAdd((player: any, sessionId: string) => {
+      $(rs).players.onAdd((player: any, sessionId: string) => {
         const isLocal = sessionId === room.sessionId;
         const sprite = new PlayerSprite(
           this,
@@ -133,6 +180,7 @@ export class GameScene extends Phaser.Scene {
         );
         this.players.set(sessionId, sprite);
         this.hud.addPlayer(sessionId, player.name);
+        this.hud.updateScore(sessionId, player.name, player.score, player.alive, rs.scoreTarget);
 
         $(player).listen("x", (value: number) => {
           sprite.setTargetX(value);
@@ -148,7 +196,7 @@ export class GameScene extends Phaser.Scene {
 
         $(player).listen("alive", (value: boolean) => {
           sprite.setAlive(value);
-          this.hud.updateScore(sessionId, player.name, player.score, value);
+          this.hud.updateScore(sessionId, player.name, player.score, value, rs.scoreTarget);
         });
 
         $(player).listen("invulnerable", (value: boolean) => {
@@ -156,11 +204,11 @@ export class GameScene extends Phaser.Scene {
         });
 
         $(player).listen("score", (value: number) => {
-          this.hud.updateScore(sessionId, player.name, value, player.alive);
+          this.hud.updateScore(sessionId, player.name, value, player.alive, rs.scoreTarget);
         });
       });
 
-      $(room.state as any).players.onRemove((_player: any, sessionId: string) => {
+      $(rs).players.onRemove((_player: any, sessionId: string) => {
         const sprite = this.players.get(sessionId);
         if (sprite) {
           sprite.destroy();
@@ -169,12 +217,12 @@ export class GameScene extends Phaser.Scene {
         this.hud.removePlayer(sessionId);
       });
 
-      $(room.state as any).bombs.onAdd((_bomb: any, key: string) => {
+      $(rs).bombs.onAdd((_bomb: any, key: string) => {
         const sprite = new BombSprite(this, _bomb.tileX, _bomb.tileY);
         this.bombs.set(key, sprite);
       });
 
-      $(room.state as any).bombs.onRemove((_bomb: any, key: string) => {
+      $(rs).bombs.onRemove((_bomb: any, key: string) => {
         const sprite = this.bombs.get(key);
         if (sprite) {
           sprite.destroy();
@@ -182,12 +230,12 @@ export class GameScene extends Phaser.Scene {
         }
       });
 
-      $(room.state as any).explosions.onAdd((explosion: any, key: string) => {
+      $(rs).explosions.onAdd((explosion: any, key: string) => {
         const sprite = new ExplosionSprite(this, explosion.cells);
         this.explosions.set(key, sprite);
       });
 
-      $(room.state as any).explosions.onRemove((_explosion: any, key: string) => {
+      $(rs).explosions.onRemove((_explosion: any, key: string) => {
         const sprite = this.explosions.get(key);
         if (sprite) {
           sprite.destroy();
@@ -219,6 +267,8 @@ export class GameScene extends Phaser.Scene {
     if (!this.connected) return;
 
     this.players.forEach((sprite) => sprite.update());
+
+    if (!this.matchPlaying) return;
 
     const input: PlayerInput = {
       left: this.cursors.left.isDown || this.wasd.A.isDown,

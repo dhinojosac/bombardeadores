@@ -14,6 +14,19 @@ export const DEFAULT_EXPLOSION_RADIUS = 2;
 
 export const PLAYER_HITBOX_SIZE = 30;
 
+function envPositiveInt(name: string, fallback: number): number {
+  const v = process.env[name];
+  if (v === undefined || v === "") return fallback;
+  const n = parseInt(v, 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+/** Puntos para ganar la partida (override: env MATCH_SCORE_TARGET). */
+export const MATCH_SCORE_TARGET = envPositiveInt("MATCH_SCORE_TARGET", 5);
+
+/** Duración máxima en ms; al llegar a 0 gana quien tenga más puntos (override: env MATCH_DURATION_MS). */
+export const MATCH_DURATION_MS = envPositiveInt("MATCH_DURATION_MS", 5 * 60 * 1000);
+
 export enum TileType {
   EMPTY = 0,
   SOLID = 1,

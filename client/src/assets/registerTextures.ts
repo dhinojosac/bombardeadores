@@ -1,7 +1,9 @@
 import Phaser from "phaser";
 
 const TILE = 48;
-const BODY = 40;
+
+/** Tamaño del cuerpo del jugador en píxeles (procedural y escala `setDisplaySize` en cliente). No confundir con `PLAYER_HITBOX_SIZE` del servidor. */
+export const PLAYER_BODY_DISPLAY_SIZE = 40;
 
 /**
  * Registers game textures. Call once at the start of GameScene.create().
@@ -48,12 +50,12 @@ export function registerGameTextures(scene: Phaser.Scene): void {
   for (let i = 0; i < 4; i++) {
     const key = playerKeys[i];
     if (scene.textures.exists(key)) continue;
-    const cx = BODY / 2;
-    const cy = BODY / 2;
+    const cx = PLAYER_BODY_DISPLAY_SIZE / 2;
+    const cy = PLAYER_BODY_DISPLAY_SIZE / 2;
     g.fillStyle(0xffffff, 1);
-    g.fillCircle(cx, cy, BODY * 0.42);
+    g.fillCircle(cx, cy, PLAYER_BODY_DISPLAY_SIZE * 0.42);
     g.lineStyle(2, 0x333333, 1);
-    g.strokeCircle(cx, cy, BODY * 0.42);
+    g.strokeCircle(cx, cy, PLAYER_BODY_DISPLAY_SIZE * 0.42);
     g.fillStyle(0x222222, 1);
     if (i === 0) {
       g.fillTriangle(cx - 8, cy + 2, cx + 8, cy + 2, cx, cy + 16);
@@ -64,7 +66,7 @@ export function registerGameTextures(scene: Phaser.Scene): void {
     } else {
       g.fillTriangle(cx + 2, cy - 8, cx + 2, cy + 8, cx + 16, cy);
     }
-    g.generateTexture(key, BODY, BODY);
+    g.generateTexture(key, PLAYER_BODY_DISPLAY_SIZE, PLAYER_BODY_DISPLAY_SIZE);
     g.clear();
   }
 

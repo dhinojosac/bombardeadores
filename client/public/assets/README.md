@@ -6,7 +6,9 @@ El juego **intenta cargar** todos los PNG listados abajo en cada arranque. No ha
 - Si el PNG **carga pero tiene tamaño 0×0** (corrupto o inválido), se **elimina** esa textura y también se usa fallback.
 - Si el tamaño **no es 48×48**, solo se muestra un **info** en consola; el juego **sigue usando tu imagen** y la escala con `setDisplaySize`.
 
-Los nombres de archivo deben coincidir con las rutas en `client/src/assets/optionalAssets.ts` (guiones bajos, no guiones).
+**Solo cuenta lo que copies aquí:** por ejemplo, si solo añades `tile_empty.png`, `tile_solid.png` y `tile_breakable.png`, el mapa usará tus tiles y el personaje, la bomba y la explosión seguirán siendo los gráficos procedurales hasta que añadas `player_*.png`, `bomb.png` y `explosion.png`.
+
+Los nombres de archivo deben coincidir con las rutas en `client/src/assets/optionalAssets.ts` (guiones bajos). Las URLs de carga usan `import.meta.env.BASE_URL` para despliegues con `base` distinto de `/`.
 
 | Archivo (en esta carpeta `public/assets/`) | Clave Phaser | Uso |
 |---------------------------------------------|--------------|-----|

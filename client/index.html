@@ -1,16 +1,147 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bomberman Multiplayer</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #1a1a2e; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
-    canvas { display: block; }
+    body {
+      background: #1a1a2e;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+      font-family: system-ui, sans-serif;
+    }
+    #app { position: relative; }
+    #game-mount canvas { display: block; }
+    #name-overlay {
+      display: none;
+      position: absolute;
+      inset: 0;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15, 15, 30, 0.92);
+      z-index: 2000;
+    }
+    #name-overlay .card {
+      background: #16213e;
+      border: 1px solid #30475e;
+      border-radius: 10px;
+      padding: 24px 28px;
+      min-width: 280px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+    }
+    #name-overlay label {
+      display: block;
+      color: #e0e0e0;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    #name-input {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 15px;
+      border: 1px solid #30475e;
+      border-radius: 6px;
+      background: #1a1a2e;
+      color: #fff;
+      margin-bottom: 16px;
+    }
+    #name-submit {
+      width: 100%;
+      padding: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      border-radius: 6px;
+      background: #3498db;
+      color: #fff;
+      cursor: pointer;
+    }
+    #name-submit:hover { background: #2980b9; }
+    #results-overlay {
+      display: none;
+      position: absolute;
+      inset: 0;
+      align-items: center;
+      justify-content: center;
+      background: rgba(10, 10, 22, 0.88);
+      z-index: 2100;
+    }
+    #results-overlay .card.wide {
+      background: #16213e;
+      border: 1px solid #30475e;
+      border-radius: 12px;
+      padding: 22px 26px;
+      min-width: 320px;
+      max-width: min(420px, 92vw);
+      max-height: 85vh;
+      overflow: auto;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    }
+    #results-overlay h2 {
+      color: #e0e0e0;
+      font-size: 1.25rem;
+      margin-bottom: 8px;
+    }
+    #results-reason {
+      color: #a8d8ff;
+      font-size: 0.9rem;
+      margin-bottom: 16px;
+    }
+    #results-list {
+      list-style: none;
+      margin: 0 0 18px 0;
+      padding: 0;
+    }
+    #results-list li {
+      color: #eee;
+      padding: 8px 10px;
+      margin-bottom: 4px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 6px;
+      font-size: 0.95rem;
+    }
+    #results-list li.results-you {
+      outline: 2px solid #3498db;
+      background: rgba(52, 152, 219, 0.15);
+    }
+    #results-close {
+      width: 100%;
+      padding: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      border-radius: 6px;
+      background: #2ecc71;
+      color: #0d1f14;
+      cursor: pointer;
+    }
+    #results-close:hover { filter: brightness(1.08); }
   </style>
 </head>
 <body>
+  <div id="app">
+    <div id="game-mount"></div>
+    <div id="name-overlay">
+      <div class="card">
+        <label for="name-input">Nombre (opcional)</label>
+        <input id="name-input" type="text" maxlength="24" placeholder="Tu nombre" autocomplete="username" />
+        <button type="button" id="name-submit">Jugar</button>
+      </div>
+    </div>
+    <div id="results-overlay">
+      <div class="card wide">
+        <h2>Partida terminada</h2>
+        <p id="results-reason"></p>
+        <ul id="results-list"></ul>
+        <button type="button" id="results-close">Cerrar</button>
+      </div>
+    </div>
+  </div>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

@@ -11,7 +11,7 @@ const config: Phaser.Types.Core.GameConfig = {
   width: MAP_WIDTH * TILE_SIZE + HUD_WIDTH,
   height: MAP_HEIGHT * TILE_SIZE,
   backgroundColor: "#1a1a2e",
-  parent: document.body,
+  parent: document.getElementById("game-mount") ?? document.body,
   scene: [GameScene],
   scale: {
     mode: Phaser.Scale.FIT,

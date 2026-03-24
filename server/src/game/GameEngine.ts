@@ -28,6 +28,8 @@ export class GameEngine {
   }
 
   update(state: GameState, deltaMs: number): void {
+    if (state.matchPhase !== "playing") return;
+
     this.processMovement(state, deltaMs);
     this.updateBombs(state, deltaMs);
     this.updateExplosions(state, deltaMs);
@@ -338,10 +340,12 @@ export class GameEngine {
     player.alive = false;
     player.respawnTimer = RESPAWN_TIME;
 
-    // Award point to the bomb owner (if not suicide)
-    const killer = state.players.get(explosion.ownerId);
-    if (killer && killer.sessionId !== player.sessionId) {
-      killer.score++;
+    // Award point to the bomb owner (if not suicide), solo con partida activa
+    if (state.matchPhase === "playing") {
+      const killer = state.players.get(explosion.ownerId);
+      if (killer && killer.sessionId !== player.sessionId) {
+        killer.score++;
+      }
     }
   }
 
