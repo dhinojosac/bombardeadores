@@ -3,6 +3,7 @@ import { GameState } from "../state/GameState";
 import { PlayerState } from "../state/PlayerState";
 import { BombState } from "../state/BombState";
 import { ExplosionState } from "../state/ExplosionState";
+import { PowerUpState } from "../state/PowerUpState";
 import { GameMap } from "./GameMap";
 import {
   TILE_SIZE,
@@ -15,13 +16,21 @@ import {
   MAP_WIDTH,
   MAP_HEIGHT,
   TileType,
+  PowerUpType,
+  POWERUP_DROP_CHANCE,
+  MAX_BOMBS,
+  MAX_RADIUS,
+  MAX_SPEED,
+  SPEED_BOOST_AMOUNT,
+  DEFAULT_BOMB_COUNT,
+  DEFAULT_EXPLOSION_RADIUS,
 } from "./constants";
-
-let nextBombId = 0;
-let nextExplosionId = 0;
 
 export class GameEngine {
   private map: GameMap;
+  private nextBombId = 0;
+  private nextExplosionId = 0;
+  private nextPowerUpId = 0;
 
   constructor(map: GameMap) {
     this.map = map;
@@ -34,6 +43,7 @@ export class GameEngine {
     this.updateBombs(state, deltaMs);
     this.updateExplosions(state, deltaMs);
     this.applyExplosionDamage(state);
+    this.checkPowerUpPickup(state);
     this.handleRespawns(state, deltaMs);
     this.updateInvulnerability(state, deltaMs);
   }
@@ -68,7 +78,7 @@ export class GameEngine {
         }
       }
 
-      const speed = PLAYER_SPEED * dt;
+      const speed = player.speed * dt;
       const newX = player.x + vx * speed;
       const newY = player.y + vy * speed;
 
@@ -186,7 +196,7 @@ export class GameEngine {
     bomb.radius = player.explosionRadius;
     bomb.fuseTimer = BOMB_FUSE_TIME;
 
-    const id = `b${nextBombId++}`;
+    const id = `b${this.nextBombId++}`;
     state.bombs.set(id, bomb);
     player.bombsAvailable--;
   }
@@ -225,7 +235,9 @@ export class GameEngine {
       owner.bombsAvailable = Math.min(owner.bombsAvailable + 1, owner.maxBombs);
     }
 
-    const affectedCells = this.calculateExplosionCells(state, bomb.tileX, bomb.tileY, bomb.radius);
+    const { cells: affectedCells, destroyed } = this.calculateExplosionCells(
+      bomb.tileX, bomb.tileY, bomb.radius
+    );
 
     const explosion = new ExplosionState();
     explosion.tileX = bomb.tileX;
@@ -235,10 +247,35 @@ export class GameEngine {
     explosion.ttl = EXPLOSION_DURATION;
     explosion.ownerId = bomb.ownerId;
 
-    const id = `e${nextExplosionId++}`;
+    const id = `e${this.nextExplosionId++}`;
     state.explosions.set(id, explosion);
 
     state.bombs.delete(bombKey);
+
+    // Destroy power-ups caught in blast
+    const puToRemove: string[] = [];
+    state.powerUps.forEach((pu, key) => {
+      for (const cell of affectedCells) {
+        if (pu.tileX === cell.x && pu.tileY === cell.y) {
+          puToRemove.push(key);
+          break;
+        }
+      }
+    });
+    for (const key of puToRemove) {
+      state.powerUps.delete(key);
+    }
+
+    // Spawn power-ups from destroyed blocks
+    for (const tile of destroyed) {
+      if (Math.random() < POWERUP_DROP_CHANCE) {
+        const pu = new PowerUpState();
+        pu.tileX = tile.x;
+        pu.tileY = tile.y;
+        pu.powerUpType = Math.floor(Math.random() * 3);
+        state.powerUps.set(`p${this.nextPowerUpId++}`, pu);
+      }
+    }
 
     // Chain reaction: detonate any bombs caught in the blast
     const chainKeys: string[] = [];
@@ -257,12 +294,12 @@ export class GameEngine {
   }
 
   private calculateExplosionCells(
-    state: GameState,
     cx: number,
     cy: number,
     radius: number
-  ): { x: number; y: number }[] {
+  ): { cells: { x: number; y: number }[]; destroyed: { x: number; y: number }[] } {
     const cells: { x: number; y: number }[] = [{ x: cx, y: cy }];
+    const destroyed: { x: number; y: number }[] = [];
 
     const directions = [
       { dx: 1, dy: 0 },
@@ -285,12 +322,13 @@ export class GameEngine {
 
         if (tile === TileType.BREAKABLE) {
           this.map.destroyTile(tx, ty);
+          destroyed.push({ x: tx, y: ty });
           break;
         }
       }
     }
 
-    return cells;
+    return { cells, destroyed };
   }
 
   // --- Explosions ---
@@ -340,12 +378,49 @@ export class GameEngine {
     player.alive = false;
     player.respawnTimer = RESPAWN_TIME;
 
-    // Award point to the bomb owner (if not suicide), solo con partida activa
     if (state.matchPhase === "playing") {
       const killer = state.players.get(explosion.ownerId);
       if (killer && killer.sessionId !== player.sessionId) {
         killer.score++;
       }
+    }
+  }
+
+  // --- Power-ups ---
+
+  private checkPowerUpPickup(state: GameState): void {
+    const toRemove: string[] = [];
+
+    state.players.forEach((player) => {
+      if (!player.alive) return;
+      const px = this.map.pixelToTile(player.x);
+      const py = this.map.pixelToTile(player.y);
+
+      state.powerUps.forEach((pu, key) => {
+        if (pu.tileX === px && pu.tileY === py) {
+          this.applyPowerUp(player, pu.powerUpType);
+          toRemove.push(key);
+        }
+      });
+    });
+
+    for (const key of toRemove) {
+      state.powerUps.delete(key);
+    }
+  }
+
+  private applyPowerUp(player: PlayerState, type: number): void {
+    switch (type) {
+      case PowerUpType.EXTRA_BOMB:
+        player.maxBombs = Math.min(player.maxBombs + 1, MAX_BOMBS);
+        player.bombsAvailable = Math.min(player.bombsAvailable + 1, player.maxBombs);
+        break;
+      case PowerUpType.EXTRA_RADIUS:
+        player.explosionRadius = Math.min(player.explosionRadius + 1, MAX_RADIUS);
+        break;
+      case PowerUpType.SPEED_BOOST:
+        player.speed = Math.min(player.speed + SPEED_BOOST_AMOUNT, MAX_SPEED);
+        break;
     }
   }
 
@@ -365,12 +440,10 @@ export class GameEngine {
   private respawnPlayer(state: GameState, player: PlayerState): void {
     const occupiedTiles = new Set<string>();
 
-    // Avoid spawning on bombs
     state.bombs.forEach((bomb) => {
       occupiedTiles.add(`${bomb.tileX},${bomb.tileY}`);
     });
 
-    // Avoid spawning on active explosions
     state.explosions.forEach((explosion) => {
       const cells = this.parseExplosionCells(explosion.cells);
       for (const cell of cells) {
@@ -386,6 +459,10 @@ export class GameEngine {
     player.invulnerable = true;
     player.invulnerabilityTimer = INVULNERABILITY_TIME;
     player.respawnTimer = 0;
+    player.maxBombs = DEFAULT_BOMB_COUNT;
+    player.bombsAvailable = DEFAULT_BOMB_COUNT;
+    player.explosionRadius = DEFAULT_EXPLOSION_RADIUS;
+    player.speed = PLAYER_SPEED;
   }
 
   // --- Invulnerability ---

@@ -1,16 +1,22 @@
 import { Room, Client } from "colyseus";
+import type { PlayerInput } from "bomberman-shared";
 import { GameState } from "../state/GameState";
-import { PlayerState, PlayerInput } from "../state/PlayerState";
+import { PlayerState } from "../state/PlayerState";
 import { StandingEntry } from "../state/StandingEntry";
 import { GameMap } from "../game/GameMap";
 import { GameEngine } from "../game/GameEngine";
 import {
   TICK_RATE,
   TILE_SIZE,
+  MAP_WIDTH,
+  MAP_HEIGHT,
   DEFAULT_BOMB_COUNT,
   DEFAULT_EXPLOSION_RADIUS,
+  PLAYER_SPEED,
+  INVULNERABILITY_TIME,
   MATCH_SCORE_TARGET,
   MATCH_DURATION_MS,
+  RESTART_COUNTDOWN_MS,
 } from "../game/constants";
 
 const DISPLAY_NAME_MAX_LEN = 24;
@@ -29,6 +35,8 @@ export class BombermanRoom extends Room<GameState> {
   onCreate(): void {
     this.setState(new GameState());
 
+    this.state.mapWidth = MAP_WIDTH;
+    this.state.mapHeight = MAP_HEIGHT;
     this.state.scoreTarget = Math.min(255, MATCH_SCORE_TARGET);
     this.state.timeRemainingMs = Math.min(2_147_483_647, MATCH_DURATION_MS);
     this.state.matchPhase = "playing";
@@ -65,6 +73,7 @@ export class BombermanRoom extends Room<GameState> {
     this.setSimulationInterval((deltaTime) => {
       this.engine.update(this.state, deltaTime);
       this.tickMatchRules(deltaTime);
+      this.tickRestart(deltaTime);
     }, 1000 / TICK_RATE);
   }
 
@@ -115,6 +124,53 @@ export class BombermanRoom extends Room<GameState> {
     }
   }
 
+  private tickRestart(deltaMs: number): void {
+    if (this.state.matchPhase !== "finished") return;
+
+    this.state.restartCountdownMs = Math.max(0, this.state.restartCountdownMs - deltaMs);
+    if (this.state.restartCountdownMs <= 0) {
+      this.restartMatch();
+    }
+  }
+
+  private restartMatch(): void {
+    this.state.bombs.clear();
+    this.state.explosions.clear();
+    this.state.powerUps.clear();
+    this.state.finalStandings.clear();
+
+    this.gameMap.generate();
+
+    this.state.timeRemainingMs = Math.min(2_147_483_647, MATCH_DURATION_MS);
+    this.state.scoreTarget = Math.min(255, MATCH_SCORE_TARGET);
+    this.state.winnerSessionId = "";
+    this.state.winnerName = "";
+    this.state.endReason = "";
+    this.state.restartCountdownMs = 0;
+
+    const occupiedTiles = new Set<string>();
+    this.state.players.forEach((player) => {
+      player.score = 0;
+      player.bombsAvailable = DEFAULT_BOMB_COUNT;
+      player.maxBombs = DEFAULT_BOMB_COUNT;
+      player.explosionRadius = DEFAULT_EXPLOSION_RADIUS;
+      player.speed = PLAYER_SPEED;
+      player.alive = true;
+      player.invulnerable = true;
+      player.invulnerabilityTimer = INVULNERABILITY_TIME;
+      player.respawnTimer = 0;
+      player.currentInput = { left: false, right: false, up: false, down: false };
+
+      const spawn = this.gameMap.getSpawnPoint(occupiedTiles);
+      player.x = spawn.tileX * TILE_SIZE + TILE_SIZE / 2;
+      player.y = spawn.tileY * TILE_SIZE + TILE_SIZE / 2;
+      occupiedTiles.add(`${spawn.tileX},${spawn.tileY}`);
+    });
+
+    this.state.matchPhase = "playing";
+    console.log("Match restarted");
+  }
+
   /**
    * Ranking 1,1,3… por puntos (empates mismo puesto).
    * Debe llamarse antes de fijar matchPhase = finished.
@@ -147,6 +203,7 @@ export class BombermanRoom extends Room<GameState> {
     this.state.winnerName = winnerName;
     this.state.endReason = endReason;
     this.state.matchPhase = "finished";
+    this.state.restartCountdownMs = RESTART_COUNTDOWN_MS;
   }
 
   private finishMatchTie(names: string[], endReason: string): void {
@@ -155,6 +212,7 @@ export class BombermanRoom extends Room<GameState> {
     this.state.winnerName = `Empate: ${names.join(", ")}`;
     this.state.endReason = endReason;
     this.state.matchPhase = "finished";
+    this.state.restartCountdownMs = RESTART_COUNTDOWN_MS;
   }
 
   onJoin(client: Client, options: { name?: string }): void {
@@ -165,6 +223,7 @@ export class BombermanRoom extends Room<GameState> {
     player.bombsAvailable = DEFAULT_BOMB_COUNT;
     player.maxBombs = DEFAULT_BOMB_COUNT;
     player.explosionRadius = DEFAULT_EXPLOSION_RADIUS;
+    player.speed = PLAYER_SPEED;
     player.alive = true;
     player.invulnerable = true;
     player.invulnerabilityTimer = 1500;

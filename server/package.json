@@ -10,7 +10,9 @@
   "dependencies": {
     "@colyseus/schema": "^3.0.0",
     "@colyseus/ws-transport": "^0.16.0",
-    "colyseus": "^0.16.0"
+    "bomberman-shared": "*",
+    "colyseus": "^0.16.0",
+    "express": "^4.21.0"
   },
   "devDependencies": {
     "localtunnel": "^2.0.2",

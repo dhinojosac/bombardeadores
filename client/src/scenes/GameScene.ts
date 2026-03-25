@@ -1,9 +1,11 @@
 import Phaser from "phaser";
 import type { Room } from "colyseus.js";
+import { TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, TileType, PowerUpType } from "bomberman-shared";
 import { NetworkManager, PlayerInput } from "../network/NetworkManager";
 import { PlayerSprite } from "../sprites/PlayerSprite";
 import { BombSprite } from "../sprites/BombSprite";
 import { ExplosionSprite } from "../sprites/ExplosionSprite";
+import { PowerUpSprite } from "../sprites/PowerUpSprite";
 import { HUD } from "../ui/HUD";
 import { registerGameTextures } from "../assets/registerTextures";
 import { OPTIONAL_IMAGE_ASSETS } from "../assets/optionalAssets";
@@ -13,14 +15,19 @@ import {
   showResultsOverlay,
   hideResultsOverlay,
   collectStandingsFromState,
+  updateResultsCountdown,
 } from "../ui/resultsOverlay";
 
-const TILE_SIZE = 48;
-
 const TILE_KEYS: Record<number, string> = {
-  0: "tile_empty",
-  1: "tile_solid",
-  2: "tile_breakable",
+  [TileType.EMPTY]: "tile_empty",
+  [TileType.SOLID]: "tile_solid",
+  [TileType.BREAKABLE]: "tile_breakable",
+};
+
+const POWERUP_TEXTURES: Record<number, string> = {
+  [PowerUpType.EXTRA_BOMB]: "powerup_bomb",
+  [PowerUpType.EXTRA_RADIUS]: "powerup_radius",
+  [PowerUpType.SPEED_BOOST]: "powerup_speed",
 };
 
 export class GameScene extends Phaser.Scene {
@@ -28,6 +35,7 @@ export class GameScene extends Phaser.Scene {
   private players: Map<string, PlayerSprite> = new Map();
   private bombs: Map<string, BombSprite> = new Map();
   private explosions: Map<string, ExplosionSprite> = new Map();
+  private powerUps: Map<string, PowerUpSprite> = new Map();
   private hud!: HUD;
   private tileLayer!: Phaser.GameObjects.Container;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -36,8 +44,8 @@ export class GameScene extends Phaser.Scene {
   private lastInput: PlayerInput = { left: false, right: false, up: false, down: false };
   private connected = false;
   private matchPlaying = true;
-  private mapWidth = 15;
-  private mapHeight = 13;
+  private mapWidth = MAP_WIDTH;
+  private mapHeight = MAP_HEIGHT;
   private colyseusRoom: Room | null = null;
 
   constructor() {
@@ -241,6 +249,24 @@ export class GameScene extends Phaser.Scene {
           sprite.destroy();
           this.explosions.delete(key);
         }
+      });
+
+      $(rs).powerUps.onAdd((powerUp: any, key: string) => {
+        const tex = POWERUP_TEXTURES[powerUp.powerUpType] ?? "powerup_bomb";
+        const sprite = new PowerUpSprite(this, powerUp.tileX, powerUp.tileY, tex);
+        this.powerUps.set(key, sprite);
+      });
+
+      $(rs).powerUps.onRemove((_pu: any, key: string) => {
+        const sprite = this.powerUps.get(key);
+        if (sprite) {
+          sprite.destroy();
+          this.powerUps.delete(key);
+        }
+      });
+
+      $(rs).listen("restartCountdownMs", (value: number) => {
+        updateResultsCountdown(value);
       });
     } catch (err) {
       console.error("Failed to connect:", err);

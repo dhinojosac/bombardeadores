@@ -29,4 +29,7 @@ export const OPTIONAL_IMAGE_ASSETS: OptionalImageAsset[] = [
   { key: "player_up", url: resolvePublicAsset("assets/player_up.png"), recommendSize: [48, 48] },
   { key: "player_left", url: resolvePublicAsset("assets/player_left.png"), recommendSize: [48, 48] },
   { key: "player_right", url: resolvePublicAsset("assets/player_right.png"), recommendSize: [48, 48] },
+  { key: "powerup_bomb", url: resolvePublicAsset("assets/powerup_bomb.png"), recommendSize: [48, 48] },
+  { key: "powerup_radius", url: resolvePublicAsset("assets/powerup_radius.png"), recommendSize: [48, 48] },
+  { key: "powerup_speed", url: resolvePublicAsset("assets/powerup_speed.png"), recommendSize: [48, 48] },
 ];

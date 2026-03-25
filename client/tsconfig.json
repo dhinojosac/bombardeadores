@@ -12,7 +12,11 @@
     "useDefineForClassFields": false,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "bomberman-shared": ["../shared/src/index"]
+    }
   },
   "include": ["src/**/*"]
 }

@@ -1,7 +1,5 @@
 import Phaser from "phaser";
-
-const TILE_SIZE = 48;
-const MAP_WIDTH = 15;
+import { TILE_SIZE, MAP_WIDTH } from "bomberman-shared";
 const SCORE_START_Y = 78;
 const ROW_H = 24;
 

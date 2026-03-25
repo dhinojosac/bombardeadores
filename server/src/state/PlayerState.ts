@@ -1,11 +1,7 @@
 import { Schema, type } from "@colyseus/schema";
+import type { PlayerInput } from "bomberman-shared";
 
-export interface PlayerInput {
-  left: boolean;
-  right: boolean;
-  up: boolean;
-  down: boolean;
-}
+export type { PlayerInput };
 
 export class PlayerState extends Schema {
   @type("string") name: string = "";
@@ -18,6 +14,7 @@ export class PlayerState extends Schema {
   @type("uint8") explosionRadius: number = 2;
   @type("uint16") score: number = 0;
   @type("boolean") invulnerable: boolean = false;
+  @type("uint8") speed: number = 150;
 
   // Server-only (not synced)
   respawnTimer: number = 0;

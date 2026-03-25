@@ -2,6 +2,7 @@
   "name": "multiplayer-game",
   "private": true,
   "workspaces": [
+    "shared",
     "server",
     "client"
   ],

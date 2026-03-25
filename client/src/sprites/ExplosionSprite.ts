@@ -1,6 +1,5 @@
 import Phaser from "phaser";
-
-const TILE_SIZE = 48;
+import { TILE_SIZE } from "bomberman-shared";
 
 export class ExplosionSprite {
   private sprites: Phaser.GameObjects.Sprite[] = [];

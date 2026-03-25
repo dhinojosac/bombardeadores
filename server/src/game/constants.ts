@@ -1,6 +1,5 @@
-export const TILE_SIZE = 48;
-export const MAP_WIDTH = 15;
-export const MAP_HEIGHT = 13;
+export { TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, TileType, PowerUpType } from "bomberman-shared";
+
 export const TICK_RATE = 20;
 export const TICK_INTERVAL = 1000 / TICK_RATE;
 
@@ -27,8 +26,10 @@ export const MATCH_SCORE_TARGET = envPositiveInt("MATCH_SCORE_TARGET", 5);
 /** Duración máxima en ms; al llegar a 0 gana quien tenga más puntos (override: env MATCH_DURATION_MS). */
 export const MATCH_DURATION_MS = envPositiveInt("MATCH_DURATION_MS", 5 * 60 * 1000);
 
-export enum TileType {
-  EMPTY = 0,
-  SOLID = 1,
-  BREAKABLE = 2,
-}
+export const RESTART_COUNTDOWN_MS = 10_000;
+
+export const POWERUP_DROP_CHANCE = 0.3;
+export const MAX_BOMBS = 5;
+export const MAX_RADIUS = 6;
+export const MAX_SPEED = 250;
+export const SPEED_BOOST_AMOUNT = 20;

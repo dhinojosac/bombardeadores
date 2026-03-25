@@ -68,4 +68,17 @@ export function showResultsOverlay(
 export function hideResultsOverlay(): void {
   const overlay = document.getElementById("results-overlay");
   if (overlay) overlay.style.display = "none";
+  const countdown = document.getElementById("results-countdown");
+  if (countdown) countdown.textContent = "";
+}
+
+export function updateResultsCountdown(ms: number): void {
+  const el = document.getElementById("results-countdown");
+  if (!el) return;
+  if (ms <= 0) {
+    el.textContent = "";
+    return;
+  }
+  const sec = Math.ceil(ms / 1000);
+  el.textContent = `Próxima partida en ${sec}s...`;
 }

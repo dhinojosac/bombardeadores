@@ -1,9 +1,7 @@
 import Phaser from "phaser";
+import { TILE_SIZE, MAP_WIDTH, MAP_HEIGHT } from "bomberman-shared";
 import { GameScene } from "./scenes/GameScene";
 
-const TILE_SIZE = 48;
-const MAP_WIDTH = 15;
-const MAP_HEIGHT = 13;
 const HUD_WIDTH = 200;
 
 const config: Phaser.Types.Core.GameConfig = {

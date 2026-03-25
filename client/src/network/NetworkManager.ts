@@ -1,11 +1,7 @@
 import { Client, Room, getStateCallbacks } from "colyseus.js";
+import type { PlayerInput } from "bomberman-shared";
 
-export interface PlayerInput {
-  left: boolean;
-  right: boolean;
-  up: boolean;
-  down: boolean;
-}
+export type { PlayerInput };
 
 export type StateCallbackProxy = ReturnType<typeof getStateCallbacks>;
 
