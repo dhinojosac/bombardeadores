@@ -127,6 +127,79 @@
       cursor: pointer;
     }
     #results-close:hover { filter: brightness(1.08); }
+    #controls-overlay {
+      display: none;
+      position: absolute;
+      inset: 0;
+      align-items: center;
+      justify-content: center;
+      background: rgba(10, 10, 22, 0.9);
+      z-index: 2050;
+    }
+    #controls-overlay .card {
+      background: #16213e;
+      border: 1px solid #30475e;
+      border-radius: 10px;
+      padding: 24px 28px;
+      min-width: 300px;
+      max-width: 380px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+    #controls-overlay h3 {
+      color: #a8d8ff;
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    #controls-overlay table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 18px;
+    }
+    #controls-overlay td {
+      color: #e0e0e0;
+      font-size: 13px;
+      padding: 6px 4px;
+      vertical-align: middle;
+    }
+    #controls-overlay td:first-child {
+      color: #888;
+      width: 38%;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    #controls-overlay kbd {
+      display: inline-block;
+      background: #0d1b2a;
+      border: 1px solid #30475e;
+      border-radius: 4px;
+      padding: 2px 7px;
+      font-family: monospace;
+      font-size: 12px;
+      color: #a8d8ff;
+      margin: 0 2px;
+    }
+    #controls-overlay p.hint {
+      color: #888;
+      font-size: 11px;
+      margin-bottom: 14px;
+      text-align: center;
+    }
+    #controls-close {
+      width: 100%;
+      padding: 9px;
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      border-radius: 6px;
+      background: #3498db;
+      color: #fff;
+      cursor: pointer;
+    }
+    #controls-close:hover { background: #2980b9; }
   </style>
 </head>
 <body>
@@ -137,6 +210,31 @@
         <label for="name-input">Nombre (opcional)</label>
         <input id="name-input" type="text" maxlength="24" placeholder="Tu nombre" autocomplete="username" />
         <button type="button" id="name-submit">Jugar</button>
+      </div>
+    </div>
+    <div id="controls-overlay">
+      <div class="card">
+        <h3>Controles</h3>
+        <table>
+          <tr>
+            <td>Mover</td>
+            <td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> o <kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd></td>
+          </tr>
+          <tr>
+            <td>Bomba</td>
+            <td><kbd>Espacio</kbd></td>
+          </tr>
+          <tr>
+            <td>Burla</td>
+            <td><kbd>E</kbd> — cicla entre 3 mensajes, se envía tras 500ms</td>
+          </tr>
+          <tr>
+            <td>Volumen</td>
+            <td>Click en <kbd>VOL</kbd> en el panel lateral</td>
+          </tr>
+        </table>
+        <p class="hint">Presiona cualquier tecla para cerrar</p>
+        <button type="button" id="controls-close">¡Entendido!</button>
       </div>
     </div>
     <div id="results-overlay">

@@ -96,32 +96,21 @@ export function registerGameTextures(scene: Phaser.Scene): void {
   const puSize = TILE_SIZE * 0.6;
   const puOffset = (TILE_SIZE - puSize) / 2;
 
-  if (!scene.textures.exists("powerup_bomb")) {
-    g.fillStyle(0xe74c3c, 1);
+  const drawPowerUp = (key: string, color: number) => {
+    if (scene.textures.exists(key)) return;
+    // White frame (slightly larger rounded rect behind)
+    g.fillStyle(0xffffff, 1);
+    g.fillRoundedRect(puOffset - 3, puOffset - 3, puSize + 6, puSize + 6, 10);
+    // Colored fill
+    g.fillStyle(color, 1);
     g.fillRoundedRect(puOffset, puOffset, puSize, puSize, 8);
-    g.lineStyle(2, 0xc0392b, 1);
-    g.strokeRoundedRect(puOffset, puOffset, puSize, puSize, 8);
-    g.generateTexture("powerup_bomb", TILE_SIZE, TILE_SIZE);
+    g.generateTexture(key, TILE_SIZE, TILE_SIZE);
     g.clear();
-  }
+  };
 
-  if (!scene.textures.exists("powerup_radius")) {
-    g.fillStyle(0xf39c12, 1);
-    g.fillRoundedRect(puOffset, puOffset, puSize, puSize, 8);
-    g.lineStyle(2, 0xe67e22, 1);
-    g.strokeRoundedRect(puOffset, puOffset, puSize, puSize, 8);
-    g.generateTexture("powerup_radius", TILE_SIZE, TILE_SIZE);
-    g.clear();
-  }
-
-  if (!scene.textures.exists("powerup_speed")) {
-    g.fillStyle(0x2ecc71, 1);
-    g.fillRoundedRect(puOffset, puOffset, puSize, puSize, 8);
-    g.lineStyle(2, 0x27ae60, 1);
-    g.strokeRoundedRect(puOffset, puOffset, puSize, puSize, 8);
-    g.generateTexture("powerup_speed", TILE_SIZE, TILE_SIZE);
-    g.clear();
-  }
+  drawPowerUp("powerup_bomb", 0xe74c3c);    // red
+  drawPowerUp("powerup_radius", 0xf39c12);  // orange
+  drawPowerUp("powerup_speed", 0x00bcd4);   // cyan — contrasts with green grass
 
   g.destroy();
 }

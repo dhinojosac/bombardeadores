@@ -9,8 +9,11 @@ import { PowerUpSprite } from "../sprites/PowerUpSprite";
 import { HUD } from "../ui/HUD";
 import { registerGameTextures } from "../assets/registerTextures";
 import { OPTIONAL_IMAGE_ASSETS } from "../assets/optionalAssets";
+import { OPTIONAL_AUDIO_ASSETS } from "../assets/optionalAudio";
+import { AudioManager } from "../audio/AudioManager";
 import { validateOptionalTextures } from "../assets/validateTextures";
 import { showNameOverlay, DISPLAY_NAME_STORAGE_KEY } from "../ui/nameOverlay";
+import { showControlsOverlay } from "../ui/controlsOverlay";
 import {
   showResultsOverlay,
   hideResultsOverlay,
@@ -30,6 +33,8 @@ const POWERUP_TEXTURES: Record<number, string> = {
   [PowerUpType.SPEED_BOOST]: "powerup_speed",
 };
 
+const TAUNT_TEXTS = ["Perkin!!", "Jiji!", "GG!", "Sorry!"];
+
 export class GameScene extends Phaser.Scene {
   private network!: NetworkManager;
   private players: Map<string, PlayerSprite> = new Map();
@@ -41,20 +46,47 @@ export class GameScene extends Phaser.Scene {
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: Record<string, Phaser.Input.Keyboard.Key>;
   private bombKey!: Phaser.Input.Keyboard.Key;
+  private tauntKey!: Phaser.Input.Keyboard.Key;
+  private tauntIndex = 2; // starts at 2 so first press wraps to 0 ("¡Adiós!")
+  private tauntDebounce: ReturnType<typeof setTimeout> | null = null;
   private lastInput: PlayerInput = { left: false, right: false, up: false, down: false };
   private connected = false;
   private matchPlaying = true;
   private mapWidth = MAP_WIDTH;
   private mapHeight = MAP_HEIGHT;
   private colyseusRoom: Room | null = null;
+  private audio!: AudioManager;
 
   constructor() {
     super({ key: "GameScene" });
   }
 
   preload(): void {
+    // Build per-key retry queues so we can try each format in sequence
+    const audioRetryQueues = new Map<string, string[]>();
+    for (const { key, urls } of OPTIONAL_AUDIO_ASSETS) {
+      const queue = [...urls]; // ["mp3_url", "wav_url", "ogg_url"]
+      audioRetryQueues.set(key, queue);
+      const first = queue.shift();
+      if (first) this.load.audio(key, first); // load only the first format
+    }
+
     this.load.on("loaderror", (file: Phaser.Loader.File) => {
-      console.warn(`[assets] Falló la carga de "${file.key}". Se usará fallback generado.`);
+      if (file.type === "image") {
+        console.warn(`[assets] Falló la carga de "${file.key}". Se usará fallback generado.`);
+        return;
+      }
+      if (file.type === "audio") {
+        const queue = audioRetryQueues.get(file.key);
+        if (queue && queue.length > 0) {
+          const nextUrl = queue.shift()!;
+          console.info(`[audio] Reintentando "${file.key}" con formato alternativo...`);
+          this.load.audio(file.key, nextUrl);
+          this.load.start(); // ensure loader processes the newly queued file
+        } else {
+          console.info(`[audio] "${file.key}" no disponible en ningún formato, silencio.`);
+        }
+      }
     });
 
     for (const { key, url } of OPTIONAL_IMAGE_ASSETS) {
@@ -66,10 +98,14 @@ export class GameScene extends Phaser.Scene {
     validateOptionalTextures(this);
     registerGameTextures(this);
 
+    this.audio = new AudioManager(this, OPTIONAL_AUDIO_ASSETS);
+
     this.tileLayer = this.add.container(0, 0);
     this.tileLayer.setDepth(0);
 
-    this.hud = new HUD(this);
+    this.hud = new HUD(this, (level) => {
+      this.audio.setVolumeLevel(level);
+    });
 
     showNameOverlay((raw) => {
       let displayName = raw;
@@ -82,6 +118,8 @@ export class GameScene extends Phaser.Scene {
           /* ignore */
         }
       }
+      // Show controls guide while connecting in the background
+      showControlsOverlay();
       void this.connectToServer(displayName);
     });
   }
@@ -120,6 +158,7 @@ export class GameScene extends Phaser.Scene {
       D: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D),
     };
     this.bombKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+    this.tauntKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E);
   }
 
   private async connectToServer(displayName: string): Promise<void> {
@@ -144,6 +183,11 @@ export class GameScene extends Phaser.Scene {
         this.scheduleResultsOverlay(rs);
       }
 
+      // Start music once the match is confirmed playing
+      if (rs.matchPhase === "playing") {
+        this.audio.playMusic(rs.isFrenzy ? "music_frenzy" : "music_game");
+      }
+
       $(rs).listen("timeRemainingMs", (value: number) => {
         this.hud.setTimerMs(value);
       });
@@ -155,6 +199,11 @@ export class GameScene extends Phaser.Scene {
         this.syncMatchHud(rs);
         if (value === "finished") {
           this.scheduleResultsOverlay(rs);
+          this.audio.playSfx("sfx_victory");
+          this.audio.stopMusic();
+        } else if (value === "playing") {
+          hideResultsOverlay();
+          this.audio.playMusic("music_game");
         } else {
           hideResultsOverlay();
         }
@@ -205,6 +254,7 @@ export class GameScene extends Phaser.Scene {
         $(player).listen("alive", (value: boolean) => {
           sprite.setAlive(value);
           this.hud.updateScore(sessionId, player.name, player.score, value, rs.scoreTarget);
+          if (!value) this.audio.playSfx("sfx_death");
         });
 
         $(player).listen("invulnerable", (value: boolean) => {
@@ -228,6 +278,7 @@ export class GameScene extends Phaser.Scene {
       $(rs).bombs.onAdd((_bomb: any, key: string) => {
         const sprite = new BombSprite(this, _bomb.tileX, _bomb.tileY);
         this.bombs.set(key, sprite);
+        this.audio.playSfx("sfx_bomb_place");
       });
 
       $(rs).bombs.onRemove((_bomb: any, key: string) => {
@@ -241,6 +292,7 @@ export class GameScene extends Phaser.Scene {
       $(rs).explosions.onAdd((explosion: any, key: string) => {
         const sprite = new ExplosionSprite(this, explosion.cells);
         this.explosions.set(key, sprite);
+        this.audio.playSfx("sfx_explosion");
       });
 
       $(rs).explosions.onRemove((_explosion: any, key: string) => {
@@ -262,11 +314,32 @@ export class GameScene extends Phaser.Scene {
         if (sprite) {
           sprite.destroy();
           this.powerUps.delete(key);
+          this.audio.playSfx("sfx_powerup");
         }
       });
 
       $(rs).listen("restartCountdownMs", (value: number) => {
         updateResultsCountdown(value);
+      });
+
+      // Sync frenzy state for late-joiners and listen for activation
+      if (rs.isFrenzy) {
+        this.hud.setFrenzy(true);
+        this.audio.playFrenzyMusic();
+      }
+      $(rs).listen("isFrenzy", (value: boolean) => {
+        this.hud.setFrenzy(value);
+        if (value) {
+          this.audio.playFrenzyMusic();
+        } else {
+          this.audio.playMusic("music_game");
+        }
+      });
+
+      room.onMessage("taunt", (data: { sessionId: string; index: number }) => {
+        const sprite = this.players.get(data.sessionId);
+        const text = TAUNT_TEXTS[data.index] ?? "¡!";
+        sprite?.showTaunt(this, text);
       });
     } catch (err) {
       console.error("Failed to connect:", err);
@@ -315,6 +388,21 @@ export class GameScene extends Phaser.Scene {
 
     if (Phaser.Input.Keyboard.JustDown(this.bombKey)) {
       this.network.sendBomb();
+    }
+
+    if (Phaser.Input.Keyboard.JustDown(this.tauntKey) && this.matchPlaying) {
+      this.tauntIndex = (this.tauntIndex + 1) % 3;
+      // Show preview immediately to the local player
+      const localSprite = this.colyseusRoom
+        ? this.players.get(this.colyseusRoom.sessionId)
+        : undefined;
+      localSprite?.showTaunt(this, TAUNT_TEXTS[this.tauntIndex]);
+      // Send to server (and others) after 500ms of inactivity
+      if (this.tauntDebounce) clearTimeout(this.tauntDebounce);
+      this.tauntDebounce = setTimeout(() => {
+        this.network.sendTaunt(this.tauntIndex);
+        this.tauntDebounce = null;
+      }, 500);
     }
   }
 }

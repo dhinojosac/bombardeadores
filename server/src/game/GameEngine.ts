@@ -22,6 +22,7 @@ import {
   MAX_RADIUS,
   MAX_SPEED,
   SPEED_BOOST_AMOUNT,
+  FRENZY_SPEED_BONUS,
   DEFAULT_BOMB_COUNT,
   DEFAULT_EXPLOSION_RADIUS,
 } from "./constants";
@@ -277,6 +278,11 @@ export class GameEngine {
       }
     }
 
+    // Trigger frenzy when the last breakable block is destroyed
+    if (destroyed.length > 0 && !state.isFrenzy && !this.map.hasBreakables()) {
+      this.triggerFrenzy(state);
+    }
+
     // Chain reaction: detonate any bombs caught in the blast
     const chainKeys: string[] = [];
     state.bombs.forEach((otherBomb, otherKey) => {
@@ -329,6 +335,16 @@ export class GameEngine {
     }
 
     return { cells, destroyed };
+  }
+
+  private triggerFrenzy(state: GameState): void {
+    state.isFrenzy = true;
+    state.players.forEach((player) => {
+      player.maxBombs = Math.min(player.maxBombs + 1, MAX_BOMBS);
+      player.bombsAvailable = Math.min(player.bombsAvailable + 1, player.maxBombs);
+      player.explosionRadius = Math.min(player.explosionRadius + 1, MAX_RADIUS);
+      player.speed = Math.min(player.speed + FRENZY_SPEED_BONUS, MAX_SPEED);
+    });
   }
 
   // --- Explosions ---
@@ -459,10 +475,19 @@ export class GameEngine {
     player.invulnerable = true;
     player.invulnerabilityTimer = INVULNERABILITY_TIME;
     player.respawnTimer = 0;
+
+    // Reset to base stats, then re-apply frenzy bonus if active
     player.maxBombs = DEFAULT_BOMB_COUNT;
     player.bombsAvailable = DEFAULT_BOMB_COUNT;
     player.explosionRadius = DEFAULT_EXPLOSION_RADIUS;
     player.speed = PLAYER_SPEED;
+
+    if (state.isFrenzy) {
+      player.maxBombs = Math.min(player.maxBombs + 1, MAX_BOMBS);
+      player.bombsAvailable = Math.min(player.bombsAvailable + 1, player.maxBombs);
+      player.explosionRadius = Math.min(player.explosionRadius + 1, MAX_RADIUS);
+      player.speed = Math.min(player.speed + FRENZY_SPEED_BONUS, MAX_SPEED);
+    }
   }
 
   // --- Invulnerability ---

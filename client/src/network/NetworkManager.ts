@@ -51,6 +51,10 @@ export class NetworkManager {
     this.room?.send("bomb");
   }
 
+  sendTaunt(index: number): void {
+    this.room?.send("taunt", { index });
+  }
+
   disconnect(): void {
     this.room?.leave();
     this.room = null;

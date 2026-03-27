@@ -5,35 +5,43 @@
 const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
+const { ensureCloudflared } = require("./ensure-cloudflared.cjs");
 
 const root = path.join(__dirname, "..");
 const winExe = path.join(root, "cloudflared.exe");
 
-let command;
-let args;
+function runTunnel() {
+  let command;
+  let args;
 
-if (process.platform === "win32" && fs.existsSync(winExe)) {
-  command = winExe;
-  args = ["tunnel", "--url", "http://localhost:2567"];
-} else {
-  command = "cloudflared";
-  args = ["tunnel", "--url", "http://localhost:2567"];
+  if (process.platform === "win32" && fs.existsSync(winExe)) {
+    command = winExe;
+    args = ["tunnel", "--url", "http://localhost:2567"];
+  } else {
+    command = "cloudflared";
+    args = ["tunnel", "--url", "http://localhost:2567"];
+  }
+
+  const child = spawn(command, args, {
+    stdio: "inherit",
+    shell: process.platform === "win32",
+  });
+
+  child.on("error", (err) => {
+    console.error(
+      "\n[tunnel] No se pudo ejecutar cloudflared. Ejecuta: node scripts/ensure-cloudflared.cjs\n"
+    );
+    console.error(err.message);
+    process.exit(1);
+  });
+
+  child.on("exit", (code) => process.exit(code ?? 0));
 }
 
-const child = spawn(command, args, {
-  stdio: "inherit",
-  shell: process.platform === "win32",
-});
-
-child.on("error", (err) => {
-  console.error(
-    "\n[ERROR] No se pudo ejecutar cloudflared.\n" +
-      "  - Windows: descarga cloudflared.exe en la raíz del repo:\n" +
-      "    https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe\n" +
-      "  - O instálalo y asegúrate de que `cloudflared` esté en el PATH.\n"
-  );
-  console.error(err.message);
+(async () => {
+  await ensureCloudflared();
+  runTunnel();
+})().catch((e) => {
+  console.error(e);
   process.exit(1);
 });
-
-child.on("exit", (code) => process.exit(code ?? 0));

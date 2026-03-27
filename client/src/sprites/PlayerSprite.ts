@@ -21,6 +21,8 @@ export class PlayerSprite {
   private direction: number;
   private invulnerable = false;
   isLocal: boolean;
+  private tauntBubble: Phaser.GameObjects.Text | null = null;
+  private tauntTimer: Phaser.Time.TimerEvent | null = null;
 
   constructor(
     scene: Phaser.Scene,
@@ -90,12 +92,50 @@ export class PlayerSprite {
     }
   }
 
+  showTaunt(scene: Phaser.Scene, text: string): void {
+    // Remove any active taunt bubble before showing the new one
+    this.tauntBubble?.destroy();
+    this.tauntTimer?.destroy();
+    this.tauntBubble = null;
+    this.tauntTimer = null;
+
+    const bubble = scene.add.text(0, -PLAYER_BODY_DISPLAY_SIZE / 2 - 32, text, {
+      fontSize: "13px",
+      color: "#222222",
+      backgroundColor: "#ffffffee",
+      padding: { x: 6, y: 3 },
+      fontFamily: "monospace",
+    });
+    bubble.setOrigin(0.5, 1);
+    bubble.setDepth(20);
+    this.container.add(bubble);
+    this.tauntBubble = bubble;
+
+    // Fade out and destroy after 2.5s (2000ms visible + 500ms fade)
+    this.tauntTimer = scene.time.addEvent({
+      delay: 2000,
+      callback: () => {
+        scene.tweens.add({
+          targets: bubble,
+          alpha: 0,
+          duration: 500,
+          onComplete: () => {
+            bubble.destroy();
+            this.tauntBubble = null;
+          },
+        });
+      },
+    });
+  }
+
   update(): void {
     this.container.x = Phaser.Math.Linear(this.container.x, this.targetX, LERP_SPEED);
     this.container.y = Phaser.Math.Linear(this.container.y, this.targetY, LERP_SPEED);
   }
 
   destroy(): void {
+    this.tauntBubble?.destroy();
+    this.tauntTimer?.destroy();
     this.container.destroy();
   }
 }

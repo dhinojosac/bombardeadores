@@ -21,6 +21,7 @@ export class GameState extends Schema {
   @type("string") winnerName: string = "";
   @type("string") endReason: string = "";
   @type("int32") restartCountdownMs: number = 0;
+  @type("boolean") isFrenzy: boolean = false;
 
   @type([StandingEntry]) finalStandings = new ArraySchema<StandingEntry>();
 }

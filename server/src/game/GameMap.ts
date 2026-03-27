@@ -19,6 +19,7 @@ const SPAWN_POINTS: SpawnPoint[] = [
 
 export class GameMap {
   private tiles: ArraySchema<number>;
+  private breakableCount: number = 0;
 
   constructor(tiles: ArraySchema<number>) {
     this.tiles = tiles;
@@ -26,6 +27,7 @@ export class GameMap {
 
   generate(): void {
     this.tiles.length = 0;
+    this.breakableCount = 0;
 
     const safeTiles = new Set<string>();
     for (const sp of SPAWN_POINTS) {
@@ -50,6 +52,7 @@ export class GameMap {
           tile = Math.random() < 0.6 ? TileType.BREAKABLE : TileType.EMPTY;
         }
 
+        if (tile === TileType.BREAKABLE) this.breakableCount++;
         this.tiles.push(tile);
       }
     }
@@ -69,9 +72,14 @@ export class GameMap {
   destroyTile(tileX: number, tileY: number): boolean {
     if (this.tileAt(tileX, tileY) === TileType.BREAKABLE) {
       this.tiles[tileY * MAP_WIDTH + tileX] = TileType.EMPTY;
+      this.breakableCount = Math.max(0, this.breakableCount - 1);
       return true;
     }
     return false;
+  }
+
+  hasBreakables(): boolean {
+    return this.breakableCount > 0;
   }
 
   getSpawnPoint(usedPositions: Set<string>): SpawnPoint {

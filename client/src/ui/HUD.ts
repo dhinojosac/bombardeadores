@@ -1,5 +1,7 @@
 import Phaser from "phaser";
 import { TILE_SIZE, MAP_WIDTH } from "bomberman-shared";
+import type { VolumeLevel } from "../audio/AudioManager";
+
 const SCORE_START_Y = 78;
 const ROW_H = 24;
 
@@ -10,6 +12,25 @@ function formatCountdown(ms: number): string {
   return `${m}:${r.toString().padStart(2, "0")}`;
 }
 
+const PANEL_COLOR_NORMAL = 0x16213e;
+const PANEL_COLOR_FRENZY = 0x4a0000;
+
+const VOLUME_CYCLE: VolumeLevel[] = ["normal", "medio", "bajo", "mute"];
+
+const VOLUME_LABELS: Record<VolumeLevel, string> = {
+  normal: "♪  VOL: NORMAL",
+  medio:  "♪  VOL: MEDIO",
+  bajo:   "♪  VOL: BAJO",
+  mute:   "✕  VOL: MUTE",
+};
+
+const VOLUME_COLORS: Record<VolumeLevel, string> = {
+  normal: "#66dd88",
+  medio:  "#aade88",
+  bajo:   "#cccccc",
+  mute:   "#888888",
+};
+
 export class HUD {
   private scene: Phaser.Scene;
   private container: Phaser.GameObjects.Container;
@@ -18,13 +39,17 @@ export class HUD {
   private timerText: Phaser.GameObjects.Text;
   private goalText: Phaser.GameObjects.Text;
   private gameOverText: Phaser.GameObjects.Text;
+  private frenzyText: Phaser.GameObjects.Text;
+  private frenzyTween: Phaser.Tweens.Tween | null = null;
+  private volBtn: Phaser.GameObjects.Text;
+  private currentVolLevel: VolumeLevel = "normal";
 
-  constructor(scene: Phaser.Scene) {
+  constructor(scene: Phaser.Scene, onVolumeChange?: (level: VolumeLevel) => void) {
     this.scene = scene;
 
     const panelX = MAP_WIDTH * TILE_SIZE + 10;
 
-    this.bg = scene.add.rectangle(panelX, 0, 200, scene.scale.height, 0x16213e);
+    this.bg = scene.add.rectangle(panelX, 0, 200, scene.scale.height, PANEL_COLOR_NORMAL);
     this.bg.setOrigin(0, 0);
     this.bg.setDepth(100);
 
@@ -67,6 +92,34 @@ export class HUD {
     this.gameOverText.setDepth(102);
     this.gameOverText.setVisible(false);
 
+    this.frenzyText = scene.add.text(panelX + 100, scene.scale.height / 2, "¡FRENESÍ!", {
+      fontSize: "18px",
+      color: "#ff4444",
+      fontFamily: "monospace",
+      fontStyle: "bold",
+    });
+    this.frenzyText.setOrigin(0.5, 0.5);
+    this.frenzyText.setDepth(103);
+    this.frenzyText.setVisible(false);
+
+    this.volBtn = scene.add.text(panelX + 10, scene.scale.height - 36, VOLUME_LABELS["normal"], {
+      fontSize: "12px",
+      color: VOLUME_COLORS["normal"],
+      fontFamily: "monospace",
+      backgroundColor: "#0d1b2a",
+      padding: { x: 6, y: 4 },
+    });
+    this.volBtn.setDepth(103);
+    this.volBtn.setInteractive({ useHandCursor: true });
+    this.volBtn.on("pointerover", () => this.volBtn.setAlpha(0.8));
+    this.volBtn.on("pointerout",  () => this.volBtn.setAlpha(1));
+    this.volBtn.on("pointerdown", () => {
+      const nextIdx = (VOLUME_CYCLE.indexOf(this.currentVolLevel) + 1) % VOLUME_CYCLE.length;
+      this.currentVolLevel = VOLUME_CYCLE[nextIdx];
+      this.updateVolBtn(this.currentVolLevel);
+      onVolumeChange?.(this.currentVolLevel);
+    });
+
     this.container = scene.add.container(0, 0, [
       this.bg,
       title,
@@ -74,6 +127,8 @@ export class HUD {
       this.goalText,
       scoreTitle,
       this.gameOverText,
+      this.frenzyText,
+      this.volBtn,
     ]);
     this.container.setDepth(100);
   }
@@ -88,6 +143,41 @@ export class HUD {
 
   setMatchEnd(_phase: string, _winnerName: string, _endReason: string): void {
     this.gameOverText.setVisible(false);
+  }
+
+  setFrenzy(active: boolean): void {
+    if (active) {
+      this.bg.setFillStyle(PANEL_COLOR_FRENZY);
+      this.frenzyText.setVisible(true);
+      if (this.frenzyTween) this.frenzyTween.destroy();
+      this.frenzyTween = this.scene.tweens.add({
+        targets: this.frenzyText,
+        alpha: { from: 1, to: 0.2 },
+        duration: 400,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut",
+      });
+    } else {
+      this.bg.setFillStyle(PANEL_COLOR_NORMAL);
+      this.frenzyText.setVisible(false);
+      if (this.frenzyTween) {
+        this.frenzyTween.destroy();
+        this.frenzyTween = null;
+      }
+      this.frenzyText.setAlpha(1);
+    }
+  }
+
+  updateVolBtn(level: VolumeLevel): void {
+    this.currentVolLevel = level;
+    this.volBtn.setText(VOLUME_LABELS[level]);
+    this.volBtn.setColor(VOLUME_COLORS[level]);
+  }
+
+  /** Backward-compat wrapper for any code still using the old mute boolean. */
+  updateMuteBtn(muted: boolean): void {
+    this.updateVolBtn(muted ? "mute" : "normal");
   }
 
   addPlayer(sessionId: string, name: string): void {

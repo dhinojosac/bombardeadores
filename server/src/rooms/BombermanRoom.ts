@@ -70,6 +70,14 @@ export class BombermanRoom extends Room<GameState> {
       }
     });
 
+    this.onMessage("taunt", (client: Client, data: { index: number }) => {
+      if (this.state.matchPhase !== "playing") return;
+      const idx = Math.floor(Number(data?.index ?? 0));
+      if (idx < 0 || idx > 2) return;
+      // Broadcast to others only — sender already showed the preview locally
+      this.broadcast("taunt", { sessionId: client.sessionId, index: idx }, { except: client });
+    });
+
     this.setSimulationInterval((deltaTime) => {
       this.engine.update(this.state, deltaTime);
       this.tickMatchRules(deltaTime);
@@ -147,6 +155,7 @@ export class BombermanRoom extends Room<GameState> {
     this.state.winnerName = "";
     this.state.endReason = "";
     this.state.restartCountdownMs = 0;
+    this.state.isFrenzy = false;
 
     const occupiedTiles = new Set<string>();
     this.state.players.forEach((player) => {

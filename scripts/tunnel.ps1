@@ -1,6 +1,6 @@
 # Ejecuta build + servidor + Cloudflare Tunnel en un solo comando.
 # Uso: .\scripts\tunnel.ps1
-# Requisito: cloudflared (cloudflared.exe en la raíz del repo o en PATH)
+# cloudflared: en Windows se puede descargar solo al arrancar el tunnel (ver README).
 
 $ErrorActionPreference = "Stop"
 Set-Location (Split-Path $PSScriptRoot -Parent)

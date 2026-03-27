@@ -16,10 +16,13 @@ export class PowerUpSprite {
 
     this.tween = scene.tweens.add({
       targets: [this.sprite],
-      alpha: { from: 1, to: 0.6 },
-      duration: 500,
+      alpha: { from: 1, to: 0.75 },
+      scaleX: { from: 1, to: 1.15 },
+      scaleY: { from: 1, to: 1.15 },
+      duration: 450,
       yoyo: true,
       repeat: -1,
+      ease: "Sine.easeInOut",
     });
   }
 

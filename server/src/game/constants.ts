@@ -33,3 +33,4 @@ export const MAX_BOMBS = 5;
 export const MAX_RADIUS = 6;
 export const MAX_SPEED = 250;
 export const SPEED_BOOST_AMOUNT = 20;
+export const FRENZY_SPEED_BONUS = 30;

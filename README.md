@@ -8,6 +8,9 @@ Juego 2D multijugador estilo Bomberman construido con **Phaser 3** (cliente) y *
 - **Reinicio automático de partida** con cuenta atrás de 10 s tras cada fin de partida
 - **Power-ups** que aparecen al destruir bloques: bomba extra, radio extra y velocidad
 - **Fin de partida** con objetivo de puntos, cuenta atrás configurable y **overlay de resultados** (ranking `finalStandings` desde el servidor)
+- **Burlas (taunts):** con `E` eliges en local entre tres mensajes (globo solo visible para ti); al dejar de pulsar 500 ms se envía a los demás
+- **Música:** volumen en el panel lateral en cuatro niveles (normal, medio, bajo, mute); los archivos opcionales van en `public/assets/audio/`
+- **Guía de controles** al confirmar el nombre (overlay HTML; se cierra con un clic o cualquier tecla)
 - Soporte para jugar online a través de tunnel público (Cloudflare Tunnel recomendado)
 
 Tras cambiar el **schema** del estado en el servidor (`GameState`, etc.), reinicia el proceso del servidor y recarga el cliente para evitar desajustes binarios con Colyseus.
@@ -48,7 +51,7 @@ Abrir múltiples pestañas en `http://localhost:3000` para probar el multijugado
 
 El cliente detecta automáticamente el entorno: si corre en `localhost:3000` (Vite), conecta al servidor en `ws://localhost:2567`.
 
-**Nombre en pantalla:** al cargar el juego aparece un **formulario dentro de la misma ventana** (sobre el área del juego). El campo se rellena por defecto con `?name=TuNombre` en la URL o con `localStorage` (`bomberman_display_name`) si existen; puedes dejarlo vacío y pulsar **Jugar** para usar un nombre aleatorio `Player_XXXX`. El servidor trunca y limpia el nombre (máx. 24 caracteres, sin caracteres de control).
+**Nombre en pantalla:** al cargar el juego aparece un **formulario dentro de la misma ventana** (sobre el área del juego). El campo se rellena por defecto con `?name=TuNombre` en la URL o con `localStorage` (`bomberman_display_name`) si existen; puedes dejarlo vacío y pulsar **Jugar** para usar un nombre aleatorio `Player_XXXX`. El servidor trunca y limpia el nombre (máx. 24 caracteres, sin caracteres de control). Tras confirmar, aparece un **resumen de controles** (movimiento, bomba, burla, volumen); puedes cerrarlo con **¡Entendido!** o con cualquier tecla.
 
 ---
 
@@ -60,7 +63,7 @@ El servidor sirve el cliente compilado y el WebSocket desde un **único puerto (
 
 Este es el flujo principal para **online**: un solo comando hace **build del cliente**, **servidor HTTP+WS en :2567** y **tunnel Cloudflare** (espera a que el servidor responda antes de abrir el tunnel).
 
-Necesitas **cloudflared**: `cloudflared.exe` en la raíz del proyecto (Windows) o el binario en el `PATH`.
+**cloudflared:** en **Windows**, si no está en el `PATH` ni existe `cloudflared.exe` en la raíz del repo, el primer `npm run tunnel:cf` (o `start:online`) **lo descarga solo** desde GitHub y lo guarda como `cloudflared.exe` (ignorado por git). En macOS/Linux hace falta tener `cloudflared` en el PATH; si falta, verás instrucciones en consola. Puedes comprobar el entorno con `npm run ensure-cloudflared`.
 
 ```bash
 npm run tunnel:all
@@ -112,6 +115,9 @@ La contraseña se obtiene en `https://loca.lt/mytunnelpassword`.
 | `A` / `←` | Mover izquierda |
 | `D` / `→` | Mover derecha |
 | `Espacio` | Colocar bomba |
+| `E` | Burla: cicla entre tres mensajes en local; si no pulsas de nuevo en 500 ms, se envía a los demás |
+
+**Audio:** en el panel lateral, el botón **VOL** cicla entre normal, medio, bajo y mute (afecta sobre todo a la música de fondo; el mute silencia también los efectos).
 
 ---
 
@@ -205,25 +211,29 @@ multiplayer-game/
 │           ├── GameMap.ts        — Generación del mapa 15×13, spawn points, colisiones
 │           └── GameEngine.ts     — Movimiento, explosiones, power-ups, respawn, invulnerabilidad
 └── client/                   — Phaser 3 + Vite (TypeScript)
-    ├── index.html              — `#app`, canvas `#game-mount`, overlays nombre y resultados
+    ├── index.html              — `#app`, canvas `#game-mount`, overlays nombre, controles y resultados
     └── src/
         ├── main.ts               — Boot de Phaser (constantes desde shared)
         ├── network/
         │   └── NetworkManager.ts — Cliente Colyseus, auto-detección de URL, callbacks
         ├── assets/
         │   ├── optionalAssets.ts — URLs de PNG opcionales bajo public/assets/
+        │   ├── optionalAudio.ts  — Claves y URLs de música/SFX opcionales
         │   ├── registerTextures.ts — Texturas procedurales (tiles, jugador, bomba, power-ups)
         │   └── validateTextures.ts
+        ├── audio/
+        │   └── AudioManager.ts   — Música, SFX, niveles de volumen, desbloqueo por gesto
         ├── scenes/
-        │   └── GameScene.ts      — Mapa, input, power-ups, countdown de reinicio
+        │   └── GameScene.ts      — Mapa, input, taunts, power-ups, countdown de reinicio
         ├── sprites/
-        │   ├── PlayerSprite.ts   — Cuerpo + nombre, lerp de posición
+        │   ├── PlayerSprite.ts   — Cuerpo + nombre, lerp, globo de burla
         │   ├── BombSprite.ts     — Círculo animado (pulso)
         │   ├── ExplosionSprite.ts — Rectángulos naranjas con fade-out
         │   └── PowerUpSprite.ts  — Ícono de power-up con animación de pulso alpha
         └── ui/
-            ├── HUD.ts            — Panel partida: tiempo, objetivo, marcador
+            ├── HUD.ts            — Panel partida: tiempo, objetivo, marcador, volumen
             ├── nameOverlay.ts    — Formulario de nombre antes de conectar
+            ├── controlsOverlay.ts — Guía de controles tras confirmar nombre
             └── resultsOverlay.ts — Ranking final + countdown de reinicio
 ```
 
@@ -234,6 +244,7 @@ Cliente                    Servidor
   │                           │
   │──── send("input") ───────►│
   │──── send("bomb")  ───────►│
+  │──── send("taunt") ───────►│
   │                           │
   │              cada 50ms    │
   │           ┌───────────────┤
