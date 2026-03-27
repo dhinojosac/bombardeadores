@@ -1,3 +1,8 @@
+# Cursor: solo versionar skills del proyecto (resto local al IDE)
+.cursor/*
+!.cursor/skills/
+!.cursor/skills/**/*
+
 node_modules/
 client/dist/
 server/dist/
