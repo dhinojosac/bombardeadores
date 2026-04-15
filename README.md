@@ -7,7 +7,7 @@ Juego 2D multijugador estilo Bomberman construido con **Phaser 3** (cliente) y *
 - Sincronización de estado en tiempo real vía WebSocket (20 Hz)
 - **Reinicio automático de partida** con cuenta atrás de 10 s tras cada fin de partida
 - **Power-ups** que aparecen al destruir bloques: bomba extra, radio extra y velocidad
-- **Fin de partida** con objetivo de puntos, cuenta atrás configurable y **overlay de resultados** (ranking `finalStandings` desde el servidor)
+- **Fin de partida** cuando queda el último superviviente (sistema de vidas), cuenta atrás configurable y **overlay de resultados** (ranking `finalStandings` desde el servidor)
 - **Burlas (taunts):** con `E` eliges en local entre tres mensajes (globo solo visible para ti); al dejar de pulsar 500 ms se envía a los demás
 - **Música:** volumen en el panel lateral en cuatro niveles (normal, medio, bajo, mute); los archivos opcionales van en `public/assets/audio/`
 - **Guía de controles** al confirmar el nombre (overlay HTML; se cierra con un clic o cualquier tecla)
@@ -132,9 +132,10 @@ La contraseña se obtiene en `https://loca.lt/mytunnelpassword`.
   - 🟠 **Radio extra** — aumenta el radio de explosión (+1, hasta 6 tiles)
   - 🟢 **Velocidad** — aumenta la velocidad de movimiento (+20 px/s, hasta 250 px/s)
 - **Respawn** automático a los 2 segundos en un punto de spawn libre, con 1.5 segundos de invulnerabilidad
-- **Puntaje** acumulativo: +1 punto por eliminar a otro jugador
-- **Fin de partida:** gana quien llegue primero al **objetivo de puntos** (por defecto **5**). Si nadie lo alcanza, al terminar la **cuenta atrás** (por defecto **5 minutos**) gana quien tenga **más puntos**; si hay empate en el máximo, se muestra **Empate**. Al terminar, la simulación se **congela** (no hay movimiento ni nuevas bombas). El servidor envía **`finalStandings`** (puesto 1,1,3… por puntos, con `sessionId` por fila) y el cliente abre un **overlay de resultados** con el ranking completo; tu fila va resaltada
-- **Reinicio automático:** 10 segundos después de terminar la partida, el servidor regenera el mapa, resetea los scores y stats de todos los jugadores y arranca una nueva partida automáticamente. El overlay muestra la cuenta regresiva en tiempo real
+- **Vidas:** cada jugador empieza con un número de vidas (por defecto **5**). Al morir por explosión se pierde 1 vida y se hace respawn automático. Si se llega a 0 vidas, dejas de reaparecer.
+- **Kills:** contador interno (+1 por muerte causada a otro jugador) usado exclusivamente para desempatar en los resultados finales.
+- **Fin de partida:** gana el **último sobreviviente** (cuando todos los demás tienen 0 vidas). Si el tiempo llega al límite de la **cuenta atrás** (por defecto **5 minutos**), el ranking se ordena por **vidas restantes** y luego por **kills** de desempate. Al terminar, la simulación se **congela** (no hay movimiento ni nuevas bombas). El servidor envía **`finalStandings`** (puesto, nombre, vidas, sessionId) y el cliente abre un **overlay de resultados** con el ranking completo; tu fila va resaltada
+- **Reinicio automático:** 10 segundos después de terminar la partida, el servidor regenera el mapa, resetea las vidas y stats de todos los jugadores y arranca una nueva partida automáticamente. El overlay muestra la cuenta regresiva en tiempo real
 
 ### Valores por defecto
 
@@ -151,11 +152,11 @@ La contraseña se obtiene en `https://loca.lt/mytunnelpassword`.
 | Tamaño visual del cuerpo (cliente) | 40 × 40 px aprox. |
 | Bombas simultáneas iniciales | 1 (máx. 5) |
 | Probabilidad de drop de power-up | 30% |
-| Objetivo para ganar (puntos) | 5 (`MATCH_SCORE_TARGET`) |
+| Vidas iniciales por jugador | 5 (`MATCH_LIVES`) |
 | Tiempo máximo de partida | 5 min (`MATCH_DURATION_MS` = 300000) |
 | Cuenta atrás para reinicio | 10 s (`RESTART_COUNTDOWN_MS`) |
 
-Variables de entorno (servidor, opcionales): `MATCH_SCORE_TARGET` (entero positivo), `MATCH_DURATION_MS` (milisegundos, entero positivo).
+Variables de entorno (servidor, opcionales): `MATCH_LIVES` (entero positivo), `MATCH_DURATION_MS` (milisegundos, entero positivo).
 
 ---
 

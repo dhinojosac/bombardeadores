@@ -17,6 +17,7 @@ import {
   MATCH_SCORE_TARGET,
   MATCH_DURATION_MS,
   RESTART_COUNTDOWN_MS,
+  DEFAULT_LIVES,
 } from "../game/constants";
 
 const DISPLAY_NAME_MAX_LEN = 24;
@@ -90,28 +91,25 @@ export class BombermanRoom extends Room<GameState> {
 
     this.state.timeRemainingMs = Math.max(0, this.state.timeRemainingMs - deltaMs);
 
-    const target = this.state.scoreTarget;
-    const atTarget: { id: string; name: string }[] = [];
-    this.state.players.forEach((p, sid) => {
-      if (p.score >= target) atTarget.push({ id: sid, name: p.name });
-    });
-
-    if (atTarget.length === 1) {
-      this.finishMatch(atTarget[0].id, atTarget[0].name, "score");
-      return;
-    }
-    if (atTarget.length > 1) {
-      this.finishMatchTie(
-        atTarget.map((x) => x.name),
-        "score"
-      );
-      return;
+    // --- Condición de victoria por último vivo ---
+    // Solo aplica cuando hay más de 1 jugador conectado
+    if (this.state.players.size > 1) {
+      const { count, lastAlive } = this.engine.countAlivePlayers(this.state);
+      if (count === 1 && lastAlive) {
+        this.finishMatch(lastAlive.id, lastAlive.name, "lastAlive");
+        return;
+      }
+      if (count === 0) {
+        this.finishMatchTie([], "lastAlive");
+        return;
+      }
     }
 
+    // --- Condición de tiempo agotado ---
     if (this.state.timeRemainingMs <= 0) {
       let max = -1;
       this.state.players.forEach((p) => {
-        if (p.score > max) max = p.score;
+        if (p.lives > max) max = p.lives;
       });
       if (max < 0 || this.state.players.size === 0) {
         this.finishMatch("", "Nadie", "time");
@@ -119,7 +117,7 @@ export class BombermanRoom extends Room<GameState> {
       }
       const leaders: { id: string; name: string }[] = [];
       this.state.players.forEach((p, sid) => {
-        if (p.score === max) leaders.push({ id: sid, name: p.name });
+        if (p.lives === max) leaders.push({ id: sid, name: p.name });
       });
       if (leaders.length === 1) {
         this.finishMatch(leaders[0].id, leaders[0].name, "time");
@@ -160,6 +158,7 @@ export class BombermanRoom extends Room<GameState> {
     const occupiedTiles = new Set<string>();
     this.state.players.forEach((player) => {
       player.score = 0;
+      player.lives = DEFAULT_LIVES;
       player.bombsAvailable = DEFAULT_BOMB_COUNT;
       player.maxBombs = DEFAULT_BOMB_COUNT;
       player.explosionRadius = DEFAULT_EXPLOSION_RADIUS;
@@ -181,26 +180,28 @@ export class BombermanRoom extends Room<GameState> {
   }
 
   /**
-   * Ranking 1,1,3… por puntos (empates mismo puesto).
+   * Ranking 1,1,3… por vidas restantes (empates mismo puesto; kills como desempate).
    * Debe llamarse antes de fijar matchPhase = finished.
    */
   private rebuildFinalStandings(): void {
     this.state.finalStandings.clear();
-    type Row = { sessionId: string; name: string; score: number };
+    type Row = { sessionId: string; name: string; lives: number; kills: number };
     const rows: Row[] = [];
     this.state.players.forEach((p, sid) => {
-      rows.push({ sessionId: sid, name: p.name, score: p.score });
+      rows.push({ sessionId: sid, name: p.name, lives: p.lives, kills: p.score });
     });
-    rows.sort((a, b) => b.score - a.score);
+    // Ordenar: más vidas primero; en empate, más kills primero
+    rows.sort((a, b) => b.lives - a.lives || b.kills - a.kills);
     let place = 1;
     for (let i = 0; i < rows.length; i++) {
-      if (i > 0 && rows[i].score !== rows[i - 1].score) {
+      if (i > 0 && rows[i].lives !== rows[i - 1].lives) {
         place = i + 1;
       }
       const e = new StandingEntry();
       e.place = Math.min(255, place);
       e.name = rows[i].name;
-      e.score = rows[i].score;
+      // Reutilizamos el campo score para almacenar vidas restantes
+      e.score = rows[i].lives;
       e.sessionId = rows[i].sessionId;
       this.state.finalStandings.push(e);
     }
@@ -233,6 +234,7 @@ export class BombermanRoom extends Room<GameState> {
     player.maxBombs = DEFAULT_BOMB_COUNT;
     player.explosionRadius = DEFAULT_EXPLOSION_RADIUS;
     player.speed = PLAYER_SPEED;
+    player.lives = DEFAULT_LIVES;
     player.alive = true;
     player.invulnerable = true;
     player.invulnerabilityTimer = 1500;

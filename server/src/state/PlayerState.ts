@@ -15,6 +15,7 @@ export class PlayerState extends Schema {
   @type("uint16") score: number = 0;
   @type("boolean") invulnerable: boolean = false;
   @type("uint8") speed: number = 150;
+  @type("uint8") lives: number = 5;
 
   // Server-only (not synced)
   respawnTimer: number = 0;

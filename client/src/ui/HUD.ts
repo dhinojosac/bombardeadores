@@ -68,14 +68,14 @@ export class HUD {
     });
     this.timerText.setDepth(101);
 
-    this.goalText = scene.add.text(panelX + 10, 52, "Objetivo: — pts", {
+    this.goalText = scene.add.text(panelX + 10, 52, "Vidas: 5 ♥", {
       fontSize: "12px",
-      color: "#cccccc",
+      color: "#ff9999",
       fontFamily: "monospace",
     });
     this.goalText.setDepth(101);
 
-    const scoreTitle = scene.add.text(panelX + 10, 68, "MARCADOR", {
+    const scoreTitle = scene.add.text(panelX + 10, 68, "VIDAS", {
       fontSize: "11px",
       color: "#888888",
       fontFamily: "monospace",
@@ -138,7 +138,7 @@ export class HUD {
   }
 
   setScoreTarget(n: number): void {
-    this.goalText.setText(`Objetivo: ${n} pts`);
+    this.goalText.setText(`Vidas: ${n} ${"\u2665".repeat(Math.min(n, 10))}`);
   }
 
   setMatchEnd(_phase: string, _winnerName: string, _endReason: string): void {
@@ -183,9 +183,9 @@ export class HUD {
   addPlayer(sessionId: string, name: string): void {
     const panelX = MAP_WIDTH * TILE_SIZE + 10;
     const yOffset = SCORE_START_Y + this.scoreTexts.size * ROW_H;
-    const text = this.scene.add.text(panelX + 10, yOffset, `${name}: 0`, {
+    const text = this.scene.add.text(panelX + 10, yOffset, `${name}: ♥♥♥♥♥`, {
       fontSize: "13px",
-      color: "#ffffff",
+      color: "#ff6666",
       fontFamily: "monospace",
     });
     text.setDepth(101);
@@ -193,14 +193,15 @@ export class HUD {
     this.scoreTexts.set(sessionId, text);
   }
 
-  updateScore(sessionId: string, name: string, score: number, alive: boolean, scoreTarget?: number): void {
+  updateScore(sessionId: string, name: string, score: number, alive: boolean, scoreTarget?: number, lives?: number, maxLives?: number): void {
     const text = this.scoreTexts.get(sessionId);
     if (text) {
-      const status = alive ? "" : " [DEAD]";
-      const meta =
-        scoreTarget !== undefined ? ` (${score}/${scoreTarget})` : "";
-      text.setText(`${name}: ${score}${meta}${status}`);
-      text.setColor(alive ? "#ffffff" : "#888888");
+      const livesCount = lives ?? 0;
+      const maxL = maxLives ?? livesCount;
+      const hearts = "♥".repeat(livesCount) + "♡".repeat(Math.max(0, maxL - livesCount));
+      const status = alive ? "" : (livesCount === 0 ? " [KO]" : " ...");
+      text.setText(`${name}: ${hearts}${status}`);
+      text.setColor(livesCount === 0 ? "#555555" : alive ? "#ff6666" : "#ff9999");
     }
   }
 

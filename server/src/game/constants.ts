@@ -23,6 +23,9 @@ function envPositiveInt(name: string, fallback: number): number {
 /** Puntos para ganar la partida (override: env MATCH_SCORE_TARGET). */
 export const MATCH_SCORE_TARGET = envPositiveInt("MATCH_SCORE_TARGET", 5);
 
+/** Vidas iniciales por jugador (override: env MATCH_LIVES). */
+export const DEFAULT_LIVES = envPositiveInt("MATCH_LIVES", 5);
+
 /** Duración máxima en ms; al llegar a 0 gana quien tenga más puntos (override: env MATCH_DURATION_MS). */
 export const MATCH_DURATION_MS = envPositiveInt("MATCH_DURATION_MS", 5 * 60 * 1000);
 

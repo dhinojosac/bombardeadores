@@ -22,6 +22,7 @@ export function collectStandingsFromState(finalStandings: unknown): StandingRow[
 export function endReasonLabel(endReason: string): string {
   if (endReason === "score") return "Objetivo de puntos";
   if (endReason === "time") return "Tiempo agotado";
+  if (endReason === "lastAlive") return "Último sobreviviente";
   return endReason;
 }
 
@@ -44,7 +45,8 @@ export function showResultsOverlay(
 
   for (const r of rows) {
     const li = document.createElement("li");
-    li.textContent = `${r.place}º — ${r.name} — ${r.score} pt${r.score === 1 ? "" : "s"}`;
+    const livesLabel = r.score === 1 ? "vida" : "vidas";
+    li.textContent = `${r.place}º — ${r.name} — ${r.score} ${livesLabel} restante${r.score === 1 ? "" : "s"}`;
     if (r.sessionId && r.sessionId === localSessionId) {
       li.classList.add("results-you");
     }

@@ -237,7 +237,7 @@ export class GameScene extends Phaser.Scene {
         );
         this.players.set(sessionId, sprite);
         this.hud.addPlayer(sessionId, player.name);
-        this.hud.updateScore(sessionId, player.name, player.score, player.alive, rs.scoreTarget);
+        this.hud.updateScore(sessionId, player.name, player.score, player.alive, rs.scoreTarget, player.lives, 5);
 
         $(player).listen("x", (value: number) => {
           sprite.setTargetX(value);
@@ -253,7 +253,7 @@ export class GameScene extends Phaser.Scene {
 
         $(player).listen("alive", (value: boolean) => {
           sprite.setAlive(value);
-          this.hud.updateScore(sessionId, player.name, player.score, value, rs.scoreTarget);
+          this.hud.updateScore(sessionId, player.name, player.score, value, rs.scoreTarget, player.lives, 5);
           if (!value) this.audio.playSfx("sfx_death");
         });
 
@@ -262,7 +262,11 @@ export class GameScene extends Phaser.Scene {
         });
 
         $(player).listen("score", (value: number) => {
-          this.hud.updateScore(sessionId, player.name, value, player.alive, rs.scoreTarget);
+          this.hud.updateScore(sessionId, player.name, value, player.alive, rs.scoreTarget, player.lives, 5);
+        });
+
+        $(player).listen("lives", (value: number) => {
+          this.hud.updateScore(sessionId, player.name, player.score, player.alive, rs.scoreTarget, value, 5);
         });
       });
 

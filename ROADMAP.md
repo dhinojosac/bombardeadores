@@ -38,6 +38,14 @@ Cambios técnicos:
 - `PowerUpSprite` en el cliente con animación de pulso alpha
 - Texturas procedurales para los tres tipos (sustituibles por PNG opcionales: `powerup_bomb.png`, `powerup_radius.png`, `powerup_speed.png`)
 
+### 6. Sistema de vidas
+Migración de condición de victoria por "Score/Puntos" a "Vidas/Último sobreviviente":
+- Jugadores inician con 5 vidas por defecto (configurable via `MATCH_LIVES`).
+- Muerte reduce 1 vida, y 0 vidas significa muerte permanente sin respawn.
+- Partida termina automáticamente cuando queda 1 solo jugador vivo.
+- HUD renderizado con iconos de vidas (♥) en lugar de label de puntos.
+- Ranking resuelto por total de vidas sobrevivientes, seguido de "kills" de desempate.
+
 ---
 
 ## Pendiente

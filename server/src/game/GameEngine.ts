@@ -25,6 +25,7 @@ import {
   FRENZY_SPEED_BONUS,
   DEFAULT_BOMB_COUNT,
   DEFAULT_EXPLOSION_RADIUS,
+  DEFAULT_LIVES,
 } from "./constants";
 
 export class GameEngine {
@@ -391,8 +392,8 @@ export class GameEngine {
   }
 
   private killPlayer(state: GameState, player: PlayerState, explosion: ExplosionState): void {
+    player.lives = Math.max(0, player.lives - 1);
     player.alive = false;
-    player.respawnTimer = RESPAWN_TIME;
 
     if (state.matchPhase === "playing") {
       const killer = state.players.get(explosion.ownerId);
@@ -400,6 +401,26 @@ export class GameEngine {
         killer.score++;
       }
     }
+
+    // Si aún le quedan vidas, programa el respawn; si no, muere permanentemente
+    if (player.lives > 0) {
+      player.respawnTimer = RESPAWN_TIME;
+    } else {
+      player.respawnTimer = 0;
+    }
+  }
+
+  /** Retorna el número de jugadores que aún tienen al menos 1 vida. */
+  countAlivePlayers(state: GameState): { count: number; lastAlive: { id: string; name: string } | null } {
+    let count = 0;
+    let lastAlive: { id: string; name: string } | null = null;
+    state.players.forEach((p, sid) => {
+      if (p.lives > 0) {
+        count++;
+        lastAlive = { id: sid, name: p.name };
+      }
+    });
+    return { count, lastAlive };
   }
 
   // --- Power-ups ---
@@ -445,6 +466,8 @@ export class GameEngine {
   private handleRespawns(state: GameState, deltaMs: number): void {
     state.players.forEach((player) => {
       if (player.alive) return;
+      // Sin vidas restantes: no reaparece
+      if (player.lives === 0) return;
 
       player.respawnTimer -= deltaMs;
       if (player.respawnTimer <= 0) {
