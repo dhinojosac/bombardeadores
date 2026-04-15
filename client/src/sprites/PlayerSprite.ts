@@ -1,8 +1,6 @@
 import Phaser from "phaser";
 import { PLAYER_BODY_DISPLAY_SIZE, PLAYER_TEXTURE_BY_DIRECTION } from "../assets/registerTextures";
-
-const PLAYER_COLORS = [0x3498db, 0xe74c3c, 0x2ecc71, 0xf39c12, 0x9b59b6, 0x1abc9c, 0xe67e22, 0xecf0f1];
-let colorIndex = 0;
+import { PLAYER_COLORS } from "bomberman-shared";
 
 /** Solo render: la colisión real la calcula el servidor (`PLAYER_HITBOX_SIZE`, p. ej. 30 px). */
 const LERP_SPEED = 0.25;
@@ -30,13 +28,13 @@ export class PlayerSprite {
     y: number,
     name: string,
     isLocal: boolean,
-    initialDirection: number = 0
+    initialDirection: number = 0,
+    initialColorIndex: number = 0
   ) {
     this.isLocal = isLocal;
     this.targetX = x;
     this.targetY = y;
-    this.color = PLAYER_COLORS[colorIndex % PLAYER_COLORS.length];
-    colorIndex++;
+    this.color = PLAYER_COLORS[initialColorIndex % PLAYER_COLORS.length] ?? 0xffffff;
     this.direction = initialDirection & 3;
 
     this.body = scene.add.sprite(0, 0, textureForDirection(this.direction));
@@ -58,6 +56,13 @@ export class PlayerSprite {
   setTarget(x: number, y: number): void {
     this.targetX = x;
     this.targetY = y;
+  }
+
+  setColorIndex(index: number): void {
+    this.color = PLAYER_COLORS[index % PLAYER_COLORS.length] ?? 0xffffff;
+    if (!this.invulnerable) {
+      this.body.setTint(this.color);
+    }
   }
 
   setTargetX(x: number): void {

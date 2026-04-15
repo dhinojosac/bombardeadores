@@ -2,8 +2,8 @@ import Phaser from "phaser";
 import { TILE_SIZE, MAP_WIDTH } from "bomberman-shared";
 import type { VolumeLevel } from "../audio/AudioManager";
 
-const SCORE_START_Y = 78;
-const ROW_H = 24;
+const SCORE_START_Y = 114;
+const ROW_H = 30;
 
 function formatCountdown(ms: number): string {
   const sec = Math.max(0, Math.ceil(ms / 1000));
@@ -43,9 +43,11 @@ export class HUD {
   private frenzyTween: Phaser.Tweens.Tween | null = null;
   private volBtn: Phaser.GameObjects.Text;
   private currentVolLevel: VolumeLevel = "normal";
+  private onVolumeChange?: (level: VolumeLevel) => void;
 
   constructor(scene: Phaser.Scene, onVolumeChange?: (level: VolumeLevel) => void) {
     this.scene = scene;
+    this.onVolumeChange = onVolumeChange;
 
     const panelX = MAP_WIDTH * TILE_SIZE + 10;
 
@@ -53,32 +55,36 @@ export class HUD {
     this.bg.setOrigin(0, 0);
     this.bg.setDepth(100);
 
-    const title = scene.add.text(panelX + 10, 10, "PARTIDA", {
-      fontSize: "16px",
-      color: "#e0e0e0",
-      fontFamily: "monospace",
+    const title = scene.add.text(panelX + 10, 15, "PARTIDA", {
+      fontSize: "20px",
+      color: "#ffffff",
+      fontFamily: "system-ui, sans-serif",
       fontStyle: "bold",
     });
+    title.setLetterSpacing(2);
     title.setDepth(101);
 
-    this.timerText = scene.add.text(panelX + 10, 32, "Tiempo: —:—", {
-      fontSize: "13px",
+    this.timerText = scene.add.text(panelX + 10, 48, "Tiempo: 0:00", {
+      fontSize: "15px",
       color: "#a8d8ff",
       fontFamily: "monospace",
     });
     this.timerText.setDepth(101);
 
-    this.goalText = scene.add.text(panelX + 10, 52, "Vidas: 5 ♥", {
+    // Reutilizamos goalText para indicar las vidas iniciales
+    this.goalText = scene.add.text(panelX + 10, 68, "Límite: 5 ♥", {
       fontSize: "12px",
       color: "#ff9999",
       fontFamily: "monospace",
     });
+    this.goalText.setAlpha(0.8);
     this.goalText.setDepth(101);
 
-    const scoreTitle = scene.add.text(panelX + 10, 68, "VIDAS", {
-      fontSize: "11px",
+    const scoreTitle = scene.add.text(panelX + 10, 92, "JUGADORES", {
+      fontSize: "13px",
       color: "#888888",
       fontFamily: "monospace",
+      fontStyle: "bold",
     });
     scoreTitle.setDepth(101);
 
@@ -114,10 +120,7 @@ export class HUD {
     this.volBtn.on("pointerover", () => this.volBtn.setAlpha(0.8));
     this.volBtn.on("pointerout",  () => this.volBtn.setAlpha(1));
     this.volBtn.on("pointerdown", () => {
-      const nextIdx = (VOLUME_CYCLE.indexOf(this.currentVolLevel) + 1) % VOLUME_CYCLE.length;
-      this.currentVolLevel = VOLUME_CYCLE[nextIdx];
-      this.updateVolBtn(this.currentVolLevel);
-      onVolumeChange?.(this.currentVolLevel);
+      this.cycleVolume();
     });
 
     this.container = scene.add.container(0, 0, [
@@ -138,7 +141,7 @@ export class HUD {
   }
 
   setScoreTarget(n: number): void {
-    this.goalText.setText(`Vidas: ${n} ${"\u2665".repeat(Math.min(n, 10))}`);
+    this.goalText.setText(`Máximo: ${n} Vidas`);
   }
 
   setMatchEnd(_phase: string, _winnerName: string, _endReason: string): void {
@@ -175,6 +178,16 @@ export class HUD {
     this.volBtn.setColor(VOLUME_COLORS[level]);
   }
 
+  cycleVolume(): void {
+    const nextIdx = (VOLUME_CYCLE.indexOf(this.currentVolLevel) + 1) % VOLUME_CYCLE.length;
+    this.currentVolLevel = VOLUME_CYCLE[nextIdx];
+    this.updateVolBtn(this.currentVolLevel);
+    
+    if (this.onVolumeChange) {
+      this.onVolumeChange(this.currentVolLevel);
+    }
+  }
+
   /** Backward-compat wrapper for any code still using the old mute boolean. */
   updateMuteBtn(muted: boolean): void {
     this.updateVolBtn(muted ? "mute" : "normal");
@@ -183,10 +196,11 @@ export class HUD {
   addPlayer(sessionId: string, name: string): void {
     const panelX = MAP_WIDTH * TILE_SIZE + 10;
     const yOffset = SCORE_START_Y + this.scoreTexts.size * ROW_H;
-    const text = this.scene.add.text(panelX + 10, yOffset, `${name}: ♥♥♥♥♥`, {
-      fontSize: "13px",
+    const text = this.scene.add.text(panelX + 10, yOffset, `${name}\n♥♥♥♥♥`, {
+      fontSize: "14px",
       color: "#ff6666",
       fontFamily: "monospace",
+      lineSpacing: 2
     });
     text.setDepth(101);
     this.container.add(text);
@@ -200,8 +214,8 @@ export class HUD {
       const maxL = maxLives ?? livesCount;
       const hearts = "♥".repeat(livesCount) + "♡".repeat(Math.max(0, maxL - livesCount));
       const status = alive ? "" : (livesCount === 0 ? " [KO]" : " ...");
-      text.setText(`${name}: ${hearts}${status}`);
-      text.setColor(livesCount === 0 ? "#555555" : alive ? "#ff6666" : "#ff9999");
+      text.setText(`${name}${status}\n${hearts}`);
+      text.setColor(livesCount === 0 ? "#555555" : alive ? "#ff8888" : "#ffaaaa");
     }
   }
 

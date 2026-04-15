@@ -406,6 +406,7 @@ export class GameEngine {
     if (player.lives > 0) {
       player.respawnTimer = RESPAWN_TIME;
     } else {
+      player.timeOfDeathMs = state.timeRemainingMs;
       player.respawnTimer = 0;
     }
   }

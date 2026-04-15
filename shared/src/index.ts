@@ -20,3 +20,14 @@ export interface PlayerInput {
   up: boolean;
   down: boolean;
 }
+
+export const PLAYER_COLORS = [
+  0x3498db, // Azul
+  0xe74c3c, // Rojo
+  0x2ecc71, // Verde
+  0xf39c12, // Naranja
+  0x9b59b6, // Morado
+  0x1abc9c, // Turquesa
+  0xe67e22, // Naranja oscuro
+  0xecf0f1, // Blanco/Plata
+];

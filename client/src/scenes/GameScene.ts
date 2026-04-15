@@ -20,6 +20,13 @@ import {
   collectStandingsFromState,
   updateResultsCountdown,
 } from "../ui/resultsOverlay";
+import {
+  initLobbyOverlay,
+  showLobbyOverlay,
+  hideLobbyOverlay,
+  updateLobbyState,
+  updateLobbyVolBtn
+} from "../ui/lobbyOverlay";
 
 const TILE_KEYS: Record<number, string> = {
   [TileType.EMPTY]: "tile_empty",
@@ -105,7 +112,14 @@ export class GameScene extends Phaser.Scene {
 
     this.hud = new HUD(this, (level) => {
       this.audio.setVolumeLevel(level);
+      updateLobbyVolBtn(level);
     });
+
+    initLobbyOverlay(
+      (idx) => this.colyseusRoom?.send("setColor", { colorIndex: idx }),
+      () => this.colyseusRoom?.send("startGame"),
+      () => this.hud.cycleVolume()
+    );
 
     showNameOverlay((raw) => {
       let displayName = raw;
@@ -181,6 +195,10 @@ export class GameScene extends Phaser.Scene {
       this.syncMatchHud(rs);
       if (rs.matchPhase === "finished") {
         this.scheduleResultsOverlay(rs);
+      } else if (rs.matchPhase === "lobby") {
+        showLobbyOverlay();
+        updateLobbyState(rs.players, room.sessionId);
+        this.audio.playMusic("music_game");
       }
 
       // Start music once the match is confirmed playing
@@ -198,14 +216,21 @@ export class GameScene extends Phaser.Scene {
         this.matchPlaying = value === "playing";
         this.syncMatchHud(rs);
         if (value === "finished") {
+          hideLobbyOverlay();
           this.scheduleResultsOverlay(rs);
           this.audio.playSfx("sfx_victory");
           this.audio.stopMusic();
         } else if (value === "playing") {
           hideResultsOverlay();
+          hideLobbyOverlay();
           this.audio.playMusic("music_game");
+        } else if (value === "lobby") {
+          hideResultsOverlay();
+          showLobbyOverlay();
+          updateLobbyState(rs.players, room.sessionId);
         } else {
           hideResultsOverlay();
+          hideLobbyOverlay();
         }
       });
       $(rs).listen("winnerName", () => this.syncMatchHud(rs));
@@ -233,11 +258,13 @@ export class GameScene extends Phaser.Scene {
           player.y,
           player.name,
           isLocal,
-          player.direction ?? 0
+          player.direction ?? 0,
+          player.colorIndex ?? 0
         );
         this.players.set(sessionId, sprite);
         this.hud.addPlayer(sessionId, player.name);
         this.hud.updateScore(sessionId, player.name, player.score, player.alive, rs.scoreTarget, player.lives, 5);
+        updateLobbyState(rs.players, room.sessionId);
 
         $(player).listen("x", (value: number) => {
           sprite.setTargetX(value);
@@ -268,6 +295,15 @@ export class GameScene extends Phaser.Scene {
         $(player).listen("lives", (value: number) => {
           this.hud.updateScore(sessionId, player.name, player.score, player.alive, rs.scoreTarget, value, 5);
         });
+
+        $(player).listen("colorIndex", (value: number) => {
+          sprite.setColorIndex(value);
+          updateLobbyState(rs.players, room.sessionId);
+        });
+
+        $(player).listen("isHost", () => {
+          updateLobbyState(rs.players, room.sessionId);
+        });
       });
 
       $(rs).players.onRemove((_player: any, sessionId: string) => {
@@ -277,6 +313,7 @@ export class GameScene extends Phaser.Scene {
           this.players.delete(sessionId);
         }
         this.hud.removePlayer(sessionId);
+        updateLobbyState(rs.players, room.sessionId);
       });
 
       $(rs).bombs.onAdd((_bomb: any, key: string) => {

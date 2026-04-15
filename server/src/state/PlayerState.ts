@@ -16,10 +16,13 @@ export class PlayerState extends Schema {
   @type("boolean") invulnerable: boolean = false;
   @type("uint8") speed: number = 150;
   @type("uint8") lives: number = 5;
+  @type("uint8") colorIndex: number = 0;
+  @type("boolean") isHost: boolean = false;
 
   // Server-only (not synced)
   respawnTimer: number = 0;
   invulnerabilityTimer: number = 0;
   currentInput: PlayerInput = { left: false, right: false, up: false, down: false };
   sessionId: string = "";
+  timeOfDeathMs: number = -1;
 }
